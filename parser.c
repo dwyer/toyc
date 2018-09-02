@@ -10,9 +10,11 @@
 
 #include <da.h>
 
-DA_DEF_HELPERS(decl, node_t *);
-DA_DEF_HELPERS(expr, node_t *);
-DA_DEF_HELPERS(stmt, node_t *);
+#define P_PANIC(p, fmt, ...) \
+    PANIC("%s:%d:%d: " fmt, (p)->filename, (p)->scanner.line, (p)->scanner.column, ## __VA_ARGS__)
+
+#define memdup(p, size) ({void *vp = malloc((size)); memcpy(vp, (p), (size)); vp;})
+#define copy(p) memdup((p), sizeof(*(p)))
 
 typedef struct {
     const char *filename;
@@ -21,36 +23,38 @@ typedef struct {
     char lit[BUFSIZ];
 } parser_t;
 
+static node_t *parse_decl(parser_t *p);
+static node_t *parse_expr(parser_t *p);
 
-#define P_PANIC(p, fmt, ...) \
-    PANIC("%s:%d:%d: " fmt, (p)->filename, (p)->scanner.line, (p)->scanner.column, ## __VA_ARGS__)
+DA_DEF_HELPERS(node, node_t *);
 
-#define memdup(p, size) ({void *vp = malloc((size)); memcpy(vp, (p), (size)); vp;})
-#define copy(p) memdup((p), sizeof(*(p)))
-
-void next(parser_t *p)
+static void next(parser_t *p)
 {
     p->tok = scanner_scan(&p->scanner, p->lit);
     LOGV("%d:%d, tok %d, \"%s\"", p->scanner.line, p->scanner.column, p->tok, p->lit);
 }
 
-void expect(parser_t *p, int tok)
+static int accept(parser_t *p, token_t tok)
 {
-    if (p->tok != tok) {
-
-        if (tok < 128)
-            P_PANIC(p, "expected \"%c\", got \"%s\"", tok, p->lit);
-        else
-            P_PANIC(p, "expected token %d, got \"%s\"", tok, p->lit);
+    if (p->tok == tok) {
+        next(p);
+        return 1;
     }
-    next(p);
+    return 0;
 }
 
-node_t *parse_expr(parser_t *p);
-
-void parse_arg_list(parser_t *p)
+static void expect(parser_t *p, token_t tok)
 {
-    LOGV("parse_arg_list");
+    if (accept(p, tok))
+        return;
+    if (tok < 128)
+        P_PANIC(p, "expected \"%c\", got \"%s\"", tok, p->lit);
+    else
+        P_PANIC(p, "expected token %d, got \"%s\"", tok, p->lit);
+}
+
+static void parse_arg_list(parser_t *p)
+{
     expect(p, '(');
     while (p->tok != ')') {
         parse_expr(p);
@@ -61,27 +65,27 @@ void parse_arg_list(parser_t *p)
     expect(p, ')');
 }
 
-node_t *parse_ident(parser_t *p)
+static node_t *parse_ident(parser_t *p)
 {
-    node_t expr = {.t = EXPR_IDENT};
+    node_t tmp = {.t = EXPR_IDENT};
     if (p->tok == TOKEN_IDENT) {
-        expr.expr.ident.name = strdup(p->lit);
+        tmp.expr.ident.name = strdup(p->lit);
         next(p);
     } else {
         expect(p, TOKEN_IDENT);
-        expr.expr.ident.name = strdup("_");
+        tmp.expr.ident.name = strdup("_");
     }
-    return copy(&expr);
+    return copy(&tmp);
 }
 
-node_t *parse_operand(parser_t *p)
+static node_t *parse_operand(parser_t *p)
 {
     switch (p->tok) {
     case TOKEN_IDENT:
         return parse_ident(p);
     case TOKEN_NUMBER:
         do {
-            node_t expr = {
+            node_t tmp = {
                 .t = EXPR_BASIC,
                 .expr.basic = {
                     .kind = p->tok,
@@ -89,18 +93,18 @@ node_t *parse_operand(parser_t *p)
                 },
             };
             next(p);
-            return copy(&expr);
+            return copy(&tmp);
         } while (0);
     case '(':
         do {
             next(p);
             node_t *x = parse_expr(p);
             expect(p, ')');
-            node_t expr = {
+            node_t tmp = {
                 .t = EXPR_PAREN,
                 .expr.paren.x = x,
             };
-            return copy(&expr);
+            return copy(&tmp);
         } while (0);
         break;
     default:
@@ -110,29 +114,32 @@ node_t *parse_operand(parser_t *p)
     return NULL;
 }
 
-node_t *parse_primary_expr(parser_t *p)
+static node_t *parse_primary_expr(parser_t *p)
 {
     return parse_operand(p);
 }
 
-node_t *parse_unary_expr(parser_t *p)
+static node_t *parse_unary_expr(parser_t *p)
 {
-    node_t expr;
     switch (p->tok) {
     case '!':
     case '+':
     case '-':
     case '~':
-        expr.t = EXPR_UNARY;
-        expr.expr.unary.op = p->tok;
-        next(p);
-        expr.expr.unary.expr = parse_expr(p);
-        return copy(&expr);
+        do {
+            node_t tmp = {
+                .t = EXPR_UNARY,
+                .expr.unary.op = p->tok,
+            };
+            next(p);
+            tmp.expr.unary.expr = parse_expr(p);
+            return copy(&tmp);
+        } while (0);
     }
     return parse_primary_expr(p);
 }
 
-node_t *parse_binary_expr(parser_t *p)
+static node_t *parse_binary_expr(parser_t *p)
 {
     node_t *x = parse_unary_expr(p);
     switch (p->tok) {
@@ -145,10 +152,12 @@ node_t *parse_binary_expr(parser_t *p)
             expect(p, op);
             node_t *y = parse_binary_expr(p);
             node_t tmp = {
-                .t=EXPR_BINARY,
-                .expr.binary.op=op,
-                .expr.binary.x=x,
-                .expr.binary.y=y,
+                .t = EXPR_BINARY,
+                .expr.binary = {
+                    .op = op,
+                    .x = x,
+                    .y = y,
+                },
             };
             x = copy(&tmp);
         } while (0);
@@ -157,102 +166,106 @@ node_t *parse_binary_expr(parser_t *p)
     return x;
 }
 
-node_t *parse_expr(parser_t *p)
+static node_t *parse_expr(parser_t *p)
 {
     return parse_binary_expr(p);
 }
 
-node_t *parse_return_stmt(parser_t *p)
+static node_t *parse_return_stmt(parser_t *p)
 {
-    node_t stmt = {
-        .t = STMT_RETURN,
-    };
     expect(p, TOKEN_RETURN);
-    if (p->tok != ';') {
-        stmt.stmt.return_.expr = parse_expr(p);
-    }
+    node_t tmp = {
+        .t = STMT_RETURN,
+        .stmt.return_.expr = p->tok == ';' ? NULL : parse_expr(p),
+    };
     expect(p, ';');
-    return copy(&stmt);
+    return copy(&tmp);
 }
 
-node_t *parse_decl(parser_t *p);
-
-node_t *parse_stmt(parser_t *p)
+static node_t *parse_stmt(parser_t *p)
 {
-    node_t stmt = {};
     switch (p->tok) {
     case TOKEN_RETURN:
         return parse_return_stmt(p);
     case TOKEN_VAR:
     case TOKEN_TYPE:
-        stmt.t = STMT_DECL;
-        stmt.stmt.decl.decl = parse_decl(p);
-        break;
+        do {
+            node_t tmp = {
+                .t = STMT_DECL,
+                .stmt.decl.decl = parse_decl(p),
+            };
+            return copy(&tmp);
+        } while (0);
     case ';':
-        stmt.t = STMT_EMPTY;
-        next(p);
-        break;
-    default:
-        P_PANIC(p, "expected statement: got %d", p->tok);
-        break;
+        do {
+            node_t tmp = { .t = STMT_EMPTY, };
+            next(p);
+            return copy(&tmp);
+        } while (0);
     }
-    return copy(&stmt);
+    P_PANIC(p, "expected statement: got %s", p->lit);
+    return NULL;
 }
 
-node_t *parse_block_stmt(parser_t *p)
+static node_t *parse_block_stmt(parser_t *p)
 {
-    da_t stmts;
-    da_init_stmt(&stmts);
     expect(p, '{');
+    da_t stmts;
+    da_init_node(&stmts);
     while (p->tok != '}') {
-        da_append_stmt(&stmts, parse_stmt(p));
+        da_append_node(&stmts, parse_stmt(p));
     }
-    da_append_stmt(&stmts, NULL);
+    da_append_node(&stmts, NULL);
     expect(p, '}');
-    node_t stmt = {
+    node_t tmp = {
         .t=STMT_BLOCK,
         .stmt.block.stmts = stmts.data,
     };
-    return copy(&stmt);
+    return copy(&tmp);
 }
 
-node_t *parse_func_decl(parser_t *p)
+static node_t *parse_func_decl(parser_t *p)
 {
-    node_t decl = {.t = DECL_FUNC,};
     expect(p, TOKEN_FUNC);
+    node_t *recv = NULL;
     node_t *ident = parse_ident(p);
-    if (p->tok == '.') {
-        expect(p, '.');
-        decl.decl.func.recv = ident;
+    if (accept(p, '.')) {
+        recv = ident;
         ident = parse_ident(p);
     }
-    decl.decl.func.name = ident;
     expect(p, '(');
     expect(p, ')');
-    decl.decl.func.type = parse_ident(p);
-    decl.decl.func.body = parse_block_stmt(p);
-    return copy(&decl);
+    node_t tmp = {
+        .t = DECL_FUNC,
+        .decl.func = {
+            .recv = recv,
+            .name = ident,
+            .type = parse_ident(p),
+            .body = parse_block_stmt(p),
+        },
+    };
+    return copy(&tmp);
 }
 
-node_t *parse_struct_type(parser_t *p)
+static node_t *parse_struct_type(parser_t *p)
 {
     expect(p, TOKEN_STRUCT);
     expect(p, '{');
     da_t fields;
-    da_init_decl(&fields);
+    da_init_node(&fields);
     while (p->tok != '}') {
-        da_append_decl(&fields, parse_decl(p));
+        da_append_node(&fields, parse_decl(p));
     }
-    da_append_decl(&fields, NULL);
+    da_append_node(&fields, NULL);
     expect(p, '}');
-    node_t expr = {
+    node_t tmp = {
         .t = EXPR_STRUCT,
         .expr.struct_.fields = da_get(&fields, 0),
     };
-    return copy(&expr);
+    return copy(&tmp);
 }
 
-node_t *parse_type_expr(parser_t *p)
+static node_t *parse_type_expr(parser_t *p)
 {
     switch (p->tok) {
     case TOKEN_IDENT:
@@ -265,32 +278,36 @@ node_t *parse_type_expr(parser_t *p)
     }
 }
 
-node_t *parse_type_decl(parser_t *p)
+static node_t *parse_type_decl(parser_t *p)
 {
-    node_t decl = {.t = DECL_TYPE};
     expect(p, TOKEN_TYPE);
-    decl.decl.type.name = parse_ident(p);
-    decl.decl.type.type = parse_type_expr(p);
+    node_t tmp = {
+        .t = DECL_TYPE,
+        .decl.type = {
+            .name = parse_ident(p),
+            .type = parse_type_expr(p),
+        },
+    };
     expect(p, ';');
-    return copy(&decl);
+    return copy(&tmp);
 }
 
-node_t *parse_var_decl(parser_t *p)
+static node_t *parse_var_decl(parser_t *p)
 {
-    node_t decl = {.t = DECL_VAR};
     expect(p, TOKEN_VAR);
-    decl.decl.var.name = parse_ident(p);
-    decl.decl.var.type = parse_ident(p);
-    decl.decl.var.value = NULL;
-    if (p->tok == '=') {
-        expect(p, '=');
-        decl.decl.var.value = parse_expr(p);
-    }
+    node_t tmp = {
+        .t = DECL_VAR,
+        .decl.var = {
+            .name = parse_ident(p),
+            .type = parse_ident(p),
+            .value = accept(p, '=') ? parse_expr(p) : NULL,
+        },
+    };
     expect(p, ';');
-    return copy(&decl);
+    return copy(&tmp);
 }
 
-node_t *parse_decl(parser_t *p)
+static node_t *parse_decl(parser_t *p)
 {
     switch (p->tok) {
     case TOKEN_FUNC:
@@ -310,12 +327,12 @@ node_t *parse_decl(parser_t *p)
 static file_t *_parse_file(parser_t *p)
 {
     da_t decls;
-    da_init_decl(&decls);
+    da_init_node(&decls);
     next(p);
     while (p->tok) {
-        da_append_decl(&decls, parse_decl(p));
+        da_append_node(&decls, parse_decl(p));
     }
-    da_append_decl(&decls, NULL);
+    da_append_node(&decls, NULL);
     file_t file = {.decls = decls.data};
     return copy(&file);
 }
