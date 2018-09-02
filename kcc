@@ -1,0 +1,7 @@
+#!/bin/sh -e
+kcfile=$1
+cfile="${kcfile}.c"
+binfile="${kcfile%.kc}"
+./main ${kcfile} >${cfile}
+cc -o ${binfile} ${cfile}
+rm -f ${cfile}
