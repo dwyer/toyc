@@ -1,7 +1,7 @@
 func main() int {
     var a int = 0;
     var b int = 0;
-    if (a) {
+    if a {
         b = 1;
     }
     return b;

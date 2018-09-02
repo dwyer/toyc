@@ -1,6 +1,6 @@
 func main() int {
     var a int = 0;
-    if (a) {
+    if a {
         return 1;
     } else {
         return 2;

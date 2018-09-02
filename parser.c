@@ -228,9 +228,7 @@ static node_t *parse_block_stmt(parser_t *p)
 static node_t *parse_if_stmt(parser_t *p)
 {
     expect(p, token_IF);
-    expect(p, token_LPAREN);
     node_t *cond = parse_expr(p);
-    expect(p, token_RPAREN);
     node_t *body = parse_block_stmt(p);
     node_t *else_ = NULL;
     if (accept(p, token_ELSE)) {
