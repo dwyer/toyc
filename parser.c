@@ -78,8 +78,10 @@ node_t *parse_expr(parser_t *p)
 {
     node_t expr = {};
     switch (p->tok) {
+    case '!':
     case '+':
     case '-':
+    case '~':
         expr.t = EXPR_UNARY;
         expr.expr.unary.op = p->tok;
         next(p);

@@ -24,6 +24,7 @@ static void next(struct scanner *s)
     case ' ':
         s->iswhite = 1;
     case '\0':
+    case '!':
     case '(':
     case ')':
     case '*':
@@ -36,6 +37,7 @@ static void next(struct scanner *s)
     case '=':
     case '{':
     case '}':
+    case '~':
         s->isdelim = 1;
         break;
     }

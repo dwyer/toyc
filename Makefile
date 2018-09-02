@@ -18,4 +18,4 @@ clean:
 	$(RM) main *.o
 
 test: main
-	./main test.kc
+	./test_compiler.sh ./kcc

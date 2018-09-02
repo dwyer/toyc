@@ -1,3 +1,4 @@
 main
 *.o
+*.kc.c
 stages/stage_*/invalid
