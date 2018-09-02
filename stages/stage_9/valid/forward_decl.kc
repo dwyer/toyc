@@ -1,0 +1,9 @@
+func foo() int;
+
+func main() int {
+    return foo();
+}
+
+func foo() int {
+    return 3;
+}

@@ -176,6 +176,9 @@ extern token_t scanner_scan(scanner_t *s, char *lit)
         case '|':
             tok = switch3(s, token_OR, token_OR_ASSIGN, '|', token_LOR);
             break;
+        case ',':
+            tok = token_COMMA;
+            break;
         default:
             PANIC("shit is illegal yo: `%c'\n", ch);
         }

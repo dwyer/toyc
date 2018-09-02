@@ -22,8 +22,15 @@ extern void crawl_node(const node_t *n)
         crawl_node(n->decl.func.type);
         printf(" ");
         crawl_node(n->decl.func.name);
-        printf("() ");
-        crawl_node(n->decl.func.body);
+        printf("(");
+        for (node_t **params = n->decl.func.params; params && *params; ) {
+            crawl_node(*params);
+            if (*++params)
+                printf(",");
+        }
+        printf(") ");
+        if (n->decl.func.body)
+            crawl_node(n->decl.func.body);
         break;
     case DECL_TYPE:
         printf("typedef ");
@@ -48,6 +55,21 @@ extern void crawl_node(const node_t *n)
         crawl_node(n->expr.binary.x);
         printf(" %s ", token_string(n->expr.binary.op));
         crawl_node(n->expr.binary.y);
+        break;
+    case EXPR_CALL:
+        crawl_node(n->expr.call.func);
+        printf("(");
+        for (node_t **args = n->expr.call.args; args && *args; ) {
+            crawl_node(*args);
+            if (*++args)
+                printf(", ");
+        }
+        printf(")");
+        break;
+    case EXPR_FIELD:
+        crawl_node(n->expr.field.type);
+        printf(" ");
+        crawl_node(n->expr.field.name);
         break;
     case EXPR_IDENT:
         printf("%s", n->expr.ident.name);
@@ -92,6 +114,9 @@ extern void crawl_node(const node_t *n)
         crawl_node(n->stmt.decl.decl);
         break;
     case STMT_EMPTY:
+        break;
+    case STMT_EXPR:
+        crawl_node(n->stmt.decl.decl);
         break;
     case STMT_FOR:
         printf("for (");

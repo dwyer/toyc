@@ -1,0 +1,22 @@
+func foo(a int) int;
+func bar(b int) int;
+
+func main() int {
+    return foo(5);
+}
+
+func foo(a int) int {
+    if a <= 0 {
+        return a;
+    }
+
+    return a + bar(a - 1);
+}
+
+func bar(b int) int {
+    if b <= 0 {
+        return b;
+    }
+
+    return b + bar(b / 2);
+}

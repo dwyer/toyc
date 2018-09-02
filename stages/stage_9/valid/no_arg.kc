@@ -1,0 +1,7 @@
+func three() int {
+    return 3;
+}
+
+func main() int {
+    return three();
+}

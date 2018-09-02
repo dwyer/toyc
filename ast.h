@@ -12,6 +12,8 @@ typedef enum {
 
     EXPR_BASIC,
     EXPR_BINARY,
+    EXPR_CALL,
+    EXPR_FIELD,
     EXPR_IDENT,
     EXPR_PAREN,
     EXPR_STRUCT,
@@ -22,6 +24,7 @@ typedef enum {
     STMT_BRANCH,
     STMT_DECL,
     STMT_EMPTY,
+    STMT_EXPR,
     STMT_FOR,
     STMT_IF,
     STMT_RETURN,
@@ -49,6 +52,16 @@ struct _node {
                 node_t *x;
                 node_t *y;
             } binary;
+
+            struct {
+                node_t *func;
+                node_t **args;
+            } call;
+
+            struct {
+                node_t *name;
+                node_t *type;
+            } field;
 
             struct {
                 char *name;
@@ -90,6 +103,10 @@ struct _node {
             } decl;
 
             struct {
+                node_t *x;
+            } expr;
+
+            struct {
                 node_t *init;
                 node_t *cond;
                 node_t *post;
@@ -113,6 +130,7 @@ struct _node {
             struct {
                 node_t *recv;
                 node_t *name;
+                node_t **params;
                 node_t *type;
                 node_t *body;
             } func;

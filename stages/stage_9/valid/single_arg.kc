@@ -1,0 +1,7 @@
+func twice(x int) int {
+    return 2 * x;
+}
+
+func main() int {
+    return twice(3);
+}

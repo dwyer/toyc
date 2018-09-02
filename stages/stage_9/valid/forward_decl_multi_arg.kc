@@ -1,0 +1,9 @@
+func foo(a int, b int) int;
+
+func main() int {
+    return foo(1, 2);
+}
+
+func foo(x int , y int) int {
+    return x - y;
+}

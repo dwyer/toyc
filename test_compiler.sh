@@ -23,7 +23,7 @@ cmp=$1
 success_total=0
 failure_total=0
 
-num_stages=8
+num_stages=9
 
 for i in `seq 1 $num_stages`; do
     success=0
@@ -61,7 +61,7 @@ for i in `seq 1 $num_stages`; do
                 test_failure
                 # cat $prog
                 # echo expected $expected_exit_code, got $actual_exit_code
-                # exit 1
+                exit 1
             else
                 test_success
             fi

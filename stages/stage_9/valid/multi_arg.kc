@@ -1,0 +1,7 @@
+func sub_3(x int, y int, z int) int {
+    return x - y - z;
+}
+
+func main() int {
+    return sub_3(10, 4, 2);
+}

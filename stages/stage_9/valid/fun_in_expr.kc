@@ -1,0 +1,9 @@
+func sum(a int, b int) int {
+    return a + b;
+}
+
+func main() int {
+    var a int = sum(1, 2) % 2;
+    var b int = 2*sum(3, 4) + sum(1, 2);
+    return b - a;
+}

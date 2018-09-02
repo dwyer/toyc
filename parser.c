@@ -26,6 +26,7 @@ typedef struct {
 static node_t *parse_decl(parser_t *p);
 static node_t *parse_expr(parser_t *p);
 static node_t *parse_stmt(parser_t *p);
+static node_t *parse_type_expr(parser_t *p);
 
 DA_DEF_HELPERS(node, node_t *);
 
@@ -49,18 +50,6 @@ static void expect(parser_t *p, token_t tok)
     if (accept(p, tok))
         return;
     P_PANIC(p, "expected %s, got %s", token_string(tok), token_string(p->tok));
-}
-
-static void parse_arg_list(parser_t *p)
-{
-    expect(p, token_LPAREN);
-    while (p->tok !=  token_RPAREN) {
-        parse_expr(p);
-        if (p->tok != token_COMMA)
-            break;
-        next(p);
-    }
-    expect(p, token_RPAREN);
 }
 
 static node_t *parse_ident(parser_t *p)
@@ -106,15 +95,41 @@ static node_t *parse_operand(parser_t *p)
         } while (0);
         break;
     default:
-        P_PANIC(p, "expected expr, got %d", p->tok);
+        P_PANIC(p, "expected expr, got `%s`", token_string(p->tok));
         break;
     }
     return NULL;
 }
 
+static node_t *parse_call(parser_t *p, node_t *func)
+{
+    expect(p, token_LPAREN);
+    da_t args;
+    da_init_node(&args);
+    while (p->tok != token_RPAREN) {
+        da_append_node(&args, parse_expr(p));
+        if (!accept(p, token_COMMA))
+            break;
+    }
+    if (da_len(&args))
+        da_append_node(&args, NULL);
+    expect(p, token_RPAREN);
+    node_t tmp = {
+        .t = EXPR_CALL,
+        .expr.call = {
+            .func = func,
+            .args = args.data,
+        },
+    };
+    return copy(&tmp);
+}
+
 static node_t *parse_primary_expr(parser_t *p)
 {
-    return parse_operand(p);
+    node_t *x = parse_operand(p);
+    if (p->tok == token_LPAREN)
+        x = parse_call(p, x);
+    return x;
 }
 
 static node_t *parse_unary_expr(parser_t *p)
@@ -194,16 +209,24 @@ static node_t *parse_return_stmt(parser_t *p)
 
 static node_t *parse_simple_stmt(parser_t *p)
 {
-    node_t *lhs = parse_ident(p);
-    expect(p, token_ASSIGN);
-    node_t *rhs = parse_expr(p);
+    node_t *lhs = parse_expr(p);
+    if (accept(p, token_ASSIGN)) {
+        node_t *rhs = parse_expr(p);
+        node_t tmp = {
+            .t = STMT_ASSIGN,
+            .stmt.assign = {
+                .lhs = lhs,
+                .tok = token_ASSIGN,
+                .rhs = rhs,
+            },
+        };
+        return copy(&tmp);
+    }
     node_t tmp = {
-        .t = STMT_ASSIGN,
-        .stmt.assign = {
-            .lhs = lhs,
-            .tok = token_ASSIGN,
-            .rhs = rhs,
-        }
+        .t = STMT_EXPR,
+        .stmt.expr = {
+            .x = lhs,
+        },
     };
     return copy(&tmp);
 }
@@ -329,6 +352,37 @@ static node_t *parse_stmt(parser_t *p)
     }
 }
 
+static node_t **parse_parameter_list(parser_t *p)
+{
+    da_t fields;
+    da_init_node(&fields);
+    for (;;) {
+        node_t tmp = {
+            .t = EXPR_FIELD,
+            .expr.field = {
+                .name = parse_ident(p),
+                .type = parse_type_expr(p),
+            },
+        };
+        da_append_node(&fields, copy(&tmp));
+        if (!accept(p, token_COMMA))
+            break;
+    }
+    if (da_len(&fields))
+        da_append_node(&fields, NULL);
+    return fields.data;
+}
+
+static node_t **parse_params(parser_t *p)
+{
+    node_t **params = NULL;
+    expect(p, token_LPAREN);
+    if (p->tok != token_RPAREN)
+        params = parse_parameter_list(p);
+    expect(p, token_RPAREN);
+    return params;
+}
+
 static node_t *parse_func_decl(parser_t *p)
 {
     expect(p, token_FUNC);
@@ -338,15 +392,21 @@ static node_t *parse_func_decl(parser_t *p)
         recv = ident;
         ident = parse_ident(p);
     }
-    expect(p, token_LPAREN);
-    expect(p, token_RPAREN);
+    node_t **params = parse_params(p);
+    node_t *type = parse_ident(p);
+    node_t *body = NULL;
+    if (p->tok == token_LBRACE)
+        body = parse_block_stmt(p);
+    else
+        expect(p, token_SEMICOLON);
     node_t tmp = {
         .t = DECL_FUNC,
         .decl.func = {
             .recv = recv,
             .name = ident,
-            .type = parse_ident(p),
-            .body = parse_block_stmt(p),
+            .params = params,
+            .type = type,
+            .body = body,
         },
     };
     return copy(&tmp);
