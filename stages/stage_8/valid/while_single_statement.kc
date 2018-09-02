@@ -1,0 +1,9 @@
+func main() int {
+    var a int = 0;
+
+    for ;a < 5; {
+        a = a + 2;
+    }
+
+    return a;
+}

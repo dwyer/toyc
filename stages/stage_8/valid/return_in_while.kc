@@ -1,0 +1,5 @@
+func main() int {
+    for ;1; {
+        return 2;
+    }
+}

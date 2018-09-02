@@ -1,0 +1,7 @@
+func main() int {
+    var i int = 3;
+    ; 
+    for var i int = 0; i < 10; i = i + 1 {
+    }
+    return i;
+}

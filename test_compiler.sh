@@ -23,7 +23,7 @@ cmp=$1
 success_total=0
 failure_total=0
 
-num_stages=7
+num_stages=8
 
 for i in `seq 1 $num_stages`; do
     success=0
@@ -59,8 +59,9 @@ for i in `seq 1 $num_stages`; do
             if [ "$expected_exit_code" -ne "$actual_exit_code" ] || [ "$expected_out" != "$actual_out" ]
             then
                 test_failure
-                cat $prog
-                cat ${prog}.c
+                # cat $prog
+                # echo expected $expected_exit_code, got $actual_exit_code
+                # exit 1
             else
                 test_success
             fi

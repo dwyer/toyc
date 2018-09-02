@@ -155,6 +155,9 @@ extern token_t scanner_scan(scanner_t *s, char *lit)
         case '~':
             tok = token_BITWISE_NOT;
             break;
+        case '%':
+            tok = switch2(s, token_REM, token_REM_ASSIGN);
+            break;
         case '<':
             tok = switch4(s, token_LSS, token_LEQ, '>', token_SHL, token_SHL_ASSIGN);
             break;

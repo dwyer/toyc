@@ -160,21 +160,25 @@ struct {
 
 extern token_t token_lookup(const char *ident)
 {
+    if (streq(ident, "break"))
+        return token_BREAK;
+    if (streq(ident, "continue"))
+        return token_CONTINUE;
     if (streq(ident, "else"))
         return token_ELSE;
-    else if (streq(ident, "for"))
+    if (streq(ident, "for"))
         return token_FOR;
-    else if (streq(ident, "func"))
+    if (streq(ident, "func"))
         return token_FUNC;
-    else if (streq(ident, "if"))
+    if (streq(ident, "if"))
         return token_IF;
-    else if (streq(ident, "return"))
+    if (streq(ident, "return"))
         return token_RETURN;
-    else if (streq(ident, "struct"))
+    if (streq(ident, "struct"))
         return token_STRUCT;
-    else if (streq(ident, "type"))
+    if (streq(ident, "type"))
         return token_TYPE;
-    else if (streq(ident, "var"))
+    if (streq(ident, "var"))
         return token_VAR;
     return token_IDENT;
 }

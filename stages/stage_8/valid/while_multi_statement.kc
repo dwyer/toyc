@@ -1,0 +1,11 @@
+func main() int {
+    var a int = 0;
+    var b int = 1;
+
+    for ;a < 5; {
+        a = a + 2;
+        b = b * a;
+    }
+
+    return a;
+}

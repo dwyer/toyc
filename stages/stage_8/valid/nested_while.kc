@@ -1,0 +1,13 @@
+func main() int {
+    var a int = 1;
+
+    for ;a % 3 != 0; {
+        var b int = 1;
+        for ;b < 10; {
+            b = b*2;
+        }
+        a = a + b;
+    }
+
+    return a;
+}

@@ -19,8 +19,10 @@ typedef enum {
 
     STMT_ASSIGN,
     STMT_BLOCK,
+    STMT_BRANCH,
     STMT_DECL,
     STMT_EMPTY,
+    STMT_FOR,
     STMT_IF,
     STMT_RETURN,
 
@@ -80,8 +82,19 @@ struct _node {
             } block;
 
             struct {
+                token_t tok;
+            } branch;
+
+            struct {
                 node_t *decl;
             } decl;
+
+            struct {
+                node_t *init;
+                node_t *cond;
+                node_t *post;
+                node_t *body;
+            } for_;
 
             struct {
                 node_t *cond;

@@ -153,6 +153,7 @@ static node_t *parse_binary_expr(parser_t *p)
     case token_MUL:
     case token_NEQ:
     case token_QUO:
+    case token_REM:
     case token_SUB:
         do {
             int op = p->tok;
@@ -196,7 +197,6 @@ static node_t *parse_simple_stmt(parser_t *p)
     node_t *lhs = parse_ident(p);
     expect(p, token_ASSIGN);
     node_t *rhs = parse_expr(p);
-    expect(p, token_SEMICOLON);
     node_t tmp = {
         .t = STMT_ASSIGN,
         .stmt.assign = {
@@ -249,6 +249,45 @@ static node_t *parse_if_stmt(parser_t *p)
     return copy(&tmp);
 }
 
+static node_t *parse_branch_stmt(parser_t *p)
+{
+    node_t tmp = {
+        .t = STMT_BRANCH,
+        .stmt.branch.tok = p->tok,
+    };
+    next(p);
+    expect(p, token_SEMICOLON);
+    return copy(&tmp);
+}
+
+static node_t *parse_for_stmt(parser_t *p)
+{
+    expect(p, token_FOR);
+    node_t *init = NULL;
+    if (p->tok != token_SEMICOLON)
+        init = parse_stmt(p);
+    else
+        expect(p, token_SEMICOLON);
+    node_t *cond = NULL;
+    if (p->tok != token_SEMICOLON)
+        cond = parse_expr(p);
+    expect(p, token_SEMICOLON);
+    node_t *post = NULL;
+    if (p->tok != token_LBRACE)
+        post = parse_simple_stmt(p);
+    node_t *body = parse_block_stmt(p);
+    node_t tmp = {
+        .t = STMT_FOR,
+        .stmt.for_ = {
+            .init = init,
+            .cond = cond,
+            .post = post,
+            .body = body,
+        },
+    };
+    return copy(&tmp);
+}
+
 static node_t *parse_stmt(parser_t *p)
 {
     switch (p->tok) {
@@ -262,13 +301,22 @@ static node_t *parse_stmt(parser_t *p)
             return copy(&tmp);
         } while (0);
     case token_IDENT:
-        return parse_simple_stmt(p);
+        do {
+            node_t *s = parse_simple_stmt(p);
+            expect(p, token_SEMICOLON);
+            return s;
+        } while (0);
     case token_RETURN:
         return parse_return_stmt(p);
+    case token_BREAK:
+    case token_CONTINUE:
+        return parse_branch_stmt(p);
     case token_LBRACE:
         return parse_block_stmt(p);
     case token_IF:
         return parse_if_stmt(p);
+    case token_FOR:
+        return parse_for_stmt(p);
     case token_SEMICOLON:
         do {
             node_t tmp = { .t = STMT_EMPTY, };

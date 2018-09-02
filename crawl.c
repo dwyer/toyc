@@ -4,6 +4,15 @@
 #include <assert.h>
 #include <stdio.h>
 
+extern void crawl_file(const file_t *f)
+{
+    node_t **decls = f->decls;
+    while (decls && *decls) {
+        crawl_node(*decls++);
+        printf(";\n");
+    }
+}
+
 extern void crawl_node(const node_t *n)
 {
     assert(n);
@@ -21,7 +30,6 @@ extern void crawl_node(const node_t *n)
         crawl_node(n->decl.type.type);
         printf(" ");
         crawl_node(n->decl.type.name);
-        printf(";\n");
         break;
     case DECL_VAR:
         crawl_node(n->decl.var.type);
@@ -31,7 +39,6 @@ extern void crawl_node(const node_t *n)
             printf(" = ");
             crawl_node(n->decl.var.value);
         }
-        printf(";\n");
         break;
 
     case EXPR_BASIC:
@@ -53,8 +60,10 @@ extern void crawl_node(const node_t *n)
     case EXPR_STRUCT:
         printf("struct {\n");
         node_t **fields = n->expr.struct_.fields;
-        while (*fields)
+        while (*fields) {
             crawl_node(*fields++);
+            printf(";\n");
+        }
         printf("}");
         break;
     case EXPR_UNARY:
@@ -66,19 +75,36 @@ extern void crawl_node(const node_t *n)
         crawl_node(n->stmt.assign.lhs);
         printf("%s", token_string(n->stmt.assign.tok));
         crawl_node(n->stmt.assign.rhs);
-        printf(";\n");
         break;
     case STMT_BLOCK:
         printf("{\n");
         node_t **stmts = n->stmt.block.stmts;
-        while (stmts && *stmts)
+        while (stmts && *stmts) {
             crawl_node(*stmts++);
+            printf(";\n");
+        }
         printf("}\n");
+        break;
+    case STMT_BRANCH:
+        printf("%s", token_string(n->stmt.branch.tok));
         break;
     case STMT_DECL:
         crawl_node(n->stmt.decl.decl);
         break;
     case STMT_EMPTY:
+        break;
+    case STMT_FOR:
+        printf("for (");
+        if (n->stmt.for_.init)
+            crawl_node(n->stmt.for_.init);
+        printf(";");
+        if (n->stmt.for_.cond)
+            crawl_node(n->stmt.for_.cond);
+        printf(";");
+        if (n->stmt.for_.post)
+            crawl_node(n->stmt.for_.post);
+        printf(") ");
+        crawl_node(n->stmt.for_.body);
         break;
     case STMT_IF:
         printf("if (");
@@ -96,11 +122,10 @@ extern void crawl_node(const node_t *n)
             printf(" ");
             crawl_node(n->stmt.return_.expr);
         }
-        printf(";\n");
         break;
 
     default:
-        printf("??? ");
+        printf(" ??? ");
         break;
     }
 }

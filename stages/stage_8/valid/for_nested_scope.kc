@@ -1,0 +1,13 @@
+func main() int {
+    var i int = 0;
+    var j int = 0;
+
+    for var i int = 100; i > 0; i = i - 1 {
+        var i int = 0;
+        var j int = j * 2 + i;
+    }
+
+    var k int = 3;
+
+    return j + k;
+}
