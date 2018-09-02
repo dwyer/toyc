@@ -36,8 +36,18 @@ extern void crawl_node(const node_t *n)
     case EXPR_BASIC:
         printf("%s", n->expr.basic.value);
         break;
+    case EXPR_BINARY:
+        crawl_node(n->expr.binary.x);
+        printf(" %c ", n->expr.binary.op);
+        crawl_node(n->expr.binary.y);
+        break;
     case EXPR_IDENT:
         printf("%s", n->expr.ident.name);
+        break;
+    case EXPR_PAREN:
+        printf("(");
+        crawl_node(n->expr.paren.x);
+        printf(")");
         break;
     case EXPR_STRUCT:
         printf("struct {\n");

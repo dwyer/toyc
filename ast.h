@@ -11,6 +11,7 @@ typedef enum {
     EXPR_BASIC,
     EXPR_BINARY,
     EXPR_IDENT,
+    EXPR_PAREN,
     EXPR_STRUCT,
     EXPR_UNARY,
 
@@ -39,13 +40,17 @@ struct _node {
 
             struct {
                 int op;
-                node_t *expr1;
-                node_t *expr2;
+                node_t *x;
+                node_t *y;
             } binary;
 
             struct {
                 char *name;
             } ident;
+
+            struct {
+                node_t *x;
+            } paren;
 
             struct {
                 node_t **fields;

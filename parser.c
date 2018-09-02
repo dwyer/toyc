@@ -74,9 +74,50 @@ node_t *parse_ident(parser_t *p)
     return copy(&expr);
 }
 
-node_t *parse_expr(parser_t *p)
+node_t *parse_operand(parser_t *p)
 {
-    node_t expr = {};
+    switch (p->tok) {
+    case TOKEN_IDENT:
+        return parse_ident(p);
+    case TOKEN_NUMBER:
+        do {
+            node_t expr = {
+                .t = EXPR_BASIC,
+                .expr.basic = {
+                    .kind = p->tok,
+                    .value = strdup(p->lit),
+                },
+            };
+            next(p);
+            return copy(&expr);
+        } while (0);
+    case '(':
+        do {
+            next(p);
+            node_t *x = parse_expr(p);
+            expect(p, ')');
+            node_t expr = {
+                .t = EXPR_PAREN,
+                .expr.paren.x = x,
+            };
+            return copy(&expr);
+        } while (0);
+        break;
+    default:
+        P_PANIC(p, "expected expr, got %d", p->tok);
+        break;
+    }
+    return NULL;
+}
+
+node_t *parse_primary_expr(parser_t *p)
+{
+    return parse_operand(p);
+}
+
+node_t *parse_unary_expr(parser_t *p)
+{
+    node_t expr;
     switch (p->tok) {
     case '!':
     case '+':
@@ -86,28 +127,39 @@ node_t *parse_expr(parser_t *p)
         expr.expr.unary.op = p->tok;
         next(p);
         expr.expr.unary.expr = parse_expr(p);
-        break;
-    case TOKEN_IDENT:
+        return copy(&expr);
+    }
+    return parse_primary_expr(p);
+}
+
+node_t *parse_binary_expr(parser_t *p)
+{
+    node_t *x = parse_unary_expr(p);
+    switch (p->tok) {
+    case '*':
+    case '+':
+    case '-':
+    case '/':
         do {
-            node_t *ident = parse_ident(p);
-            return ident;
-            /* next(p); */
-            /* if (p->tok == '(') { */
-            /*     parse_arg_list(p); */
-            /* } */
+            int op = p->tok;
+            expect(p, op);
+            node_t *y = parse_binary_expr(p);
+            node_t tmp = {
+                .t=EXPR_BINARY,
+                .expr.binary.op=op,
+                .expr.binary.x=x,
+                .expr.binary.y=y,
+            };
+            x = copy(&tmp);
         } while (0);
         break;
-    case TOKEN_NUMBER:
-        expr.t = EXPR_BASIC;
-        expr.expr.basic.kind = TOKEN_NUMBER;
-        expr.expr.basic.value = strdup(p->lit);
-        next(p);
-        break;
-    default:
-        P_PANIC(p, "expected expr, got %d", p->tok);
-        break;
     }
-    return copy(&expr);
+    return x;
+}
+
+node_t *parse_expr(parser_t *p)
+{
+    return parse_binary_expr(p);
 }
 
 node_t *parse_return_stmt(parser_t *p)
