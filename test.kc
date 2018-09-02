@@ -8,6 +8,10 @@ type vec2 struct {
     var y int;
 };
 
+func vec2.len() int {
+    return 0;
+}
+
 func main() int {
     return 0;
 }

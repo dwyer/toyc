@@ -43,5 +43,7 @@ int main(int argc, char *argv[])
     while (decls && *decls)
         crawl_decl(*decls++);
 
+    free(src);
+
     return 0;
 }

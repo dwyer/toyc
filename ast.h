@@ -44,7 +44,6 @@ struct _expr {
         } binary;
 
         struct {
-            int pos;
             char *name;
         } ident;
 
@@ -86,6 +85,7 @@ struct _decl {
     union {
 
         struct {
+            expr_t *recv;
             expr_t *name;
             expr_t *type;
             stmt_t *body;

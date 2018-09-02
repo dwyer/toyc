@@ -12,12 +12,12 @@ static void next(struct scanner *s)
         return;
     s->isdelim = 0;
     s->iswhite = 0;
-    s->colno++;
+    s->column++;
     s->ch = s->src[s->offset++];
     switch (s->ch) {
     case '\n':
-        s->colno = 1;
-        s->lineno++;
+        s->column = 1;
+        s->line++;
         /* TODO: insert semicolon */
     case '\r':
     case '\t':
@@ -30,11 +30,12 @@ static void next(struct scanner *s)
     case '+':
     case ',':
     case '-':
+    case '.':
     case '/':
     case ';':
+    case '=':
     case '{':
     case '}':
-    case '=':
         s->isdelim = 1;
         break;
     }
@@ -42,15 +43,15 @@ static void next(struct scanner *s)
 
 extern void scanner_init(struct scanner *s, char *src, int len)
 {
-    s->lineno = 1;
-    s->colno = 1;
+    s->line = 1;
+    s->column = 1;
     s->ch = -1;
     s->src = src;
     s->src_len = len;
     next(s);
 }
 
-extern int scanner_scan(struct scanner *s, char *lit)
+extern token_t scanner_scan(struct scanner *s, char *lit)
 {
     char *st = lit;
     int tok;

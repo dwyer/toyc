@@ -23,7 +23,7 @@ typedef struct {
 
 
 #define P_PANIC(p, fmt, ...) \
-    PANIC("%s:%d:%d: " fmt, (p)->filename, (p)->scanner.lineno, (p)->scanner.colno, ## __VA_ARGS__)
+    PANIC("%s:%d:%d: " fmt, (p)->filename, (p)->scanner.line, (p)->scanner.column, ## __VA_ARGS__)
 
 #define memdup(p, size) ({void *vp = malloc((size)); memcpy(vp, (p), (size)); vp;})
 #define copy(p) memdup((p), sizeof(*(p)))
@@ -31,7 +31,7 @@ typedef struct {
 void next(parser_t *p)
 {
     p->tok = scanner_scan(&p->scanner, p->lit);
-    LOGV("%d:%d, tok %d, \"%s\"", p->scanner.lineno, p->scanner.colno, p->tok, p->lit);
+    LOGV("%d:%d, tok %d, \"%s\"", p->scanner.line, p->scanner.column, p->tok, p->lit);
 }
 
 void expect(parser_t *p, int tok)
@@ -64,7 +64,6 @@ void parse_arg_list(parser_t *p)
 expr_t *parse_ident(parser_t *p)
 {
     expr_t expr = {.t = EXPR_IDENT};
-    expr.expr.ident.pos = p->scanner.offset;
     if (p->tok == TOKEN_IDENT) {
         expr.expr.ident.name = strdup(p->lit);
         next(p);
@@ -167,7 +166,13 @@ decl_t *parse_func_decl(parser_t *p)
 {
     decl_t decl = {.t = DECL_FUNC,};
     expect(p, TOKEN_FUNC);
-    decl.decl.func.name = parse_ident(p);
+    expr_t *ident = parse_ident(p);
+    if (p->tok == '.') {
+        expect(p, '.');
+        decl.decl.func.recv = ident;
+        ident = parse_ident(p);
+    }
+    decl.decl.func.name = ident;
     expect(p, '(');
     expect(p, ')');
     decl.decl.func.type = parse_ident(p);

@@ -66,6 +66,10 @@ void crawl_decl(decl_t *decl)
     switch (decl->t) {
     case DECL_FUNC:
         printf("func ");
+        if (decl->decl.func.recv) {
+            crawl_expr(decl->decl.func.recv);
+            printf(".");
+        }
         crawl_expr(decl->decl.func.name);
         printf("() ");
         crawl_expr(decl->decl.func.type);
