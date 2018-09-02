@@ -9,28 +9,23 @@ extern void crawl_node(const node_t *n)
     switch (n->t) {
 
     case DECL_FUNC:
-        printf("func ");
-        if (n->decl.func.recv) {
-            crawl_node(n->decl.func.recv);
-            printf(".");
-        }
+        crawl_node(n->decl.func.type);
+        printf(" ");
         crawl_node(n->decl.func.name);
         printf("() ");
-        crawl_node(n->decl.func.type);
         crawl_node(n->decl.func.body);
         break;
     case DECL_TYPE:
-        printf("type ");
-        crawl_node(n->decl.type.name);
-        printf(" ");
+        printf("typedef ");
         crawl_node(n->decl.type.type);
+        printf(" ");
+        crawl_node(n->decl.type.name);
         printf(";\n");
         break;
     case DECL_VAR:
-        printf("var ");
-        crawl_node(n->decl.var.name);
-        printf(" ");
         crawl_node(n->decl.var.type);
+        printf(" ");
+        crawl_node(n->decl.var.name);
         if (n->decl.var.value) {
             printf(" = ");
             crawl_node(n->decl.var.value);
