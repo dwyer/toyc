@@ -21,6 +21,7 @@ typedef enum {
     STMT_BLOCK,
     STMT_DECL,
     STMT_EMPTY,
+    STMT_IF,
     STMT_RETURN,
 
     DECL_FUNC,
@@ -81,6 +82,12 @@ struct _node {
             struct {
                 node_t *decl;
             } decl;
+
+            struct {
+                node_t *cond;
+                node_t *body;
+                node_t *else_;
+            } if_;
 
             struct {
                 node_t *expr;

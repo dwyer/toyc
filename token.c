@@ -160,10 +160,14 @@ struct {
 
 extern token_t token_lookup(const char *ident)
 {
-    if (streq(ident, "for"))
+    if (streq(ident, "else"))
+        return token_ELSE;
+    else if (streq(ident, "for"))
         return token_FOR;
     else if (streq(ident, "func"))
         return token_FUNC;
+    else if (streq(ident, "if"))
+        return token_IF;
     else if (streq(ident, "return"))
         return token_RETURN;
     else if (streq(ident, "struct"))

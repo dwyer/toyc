@@ -23,7 +23,7 @@ cmp=$1
 success_total=0
 failure_total=0
 
-num_stages=5
+num_stages=6
 
 for i in `seq 1 $num_stages`; do
     success=0
@@ -60,6 +60,7 @@ for i in `seq 1 $num_stages`; do
             then
                 test_failure
                 cat $prog
+                cat ${prog}.c
             else
                 test_success
             fi

@@ -80,6 +80,16 @@ extern void crawl_node(const node_t *n)
         break;
     case STMT_EMPTY:
         break;
+    case STMT_IF:
+        printf("if (");
+        crawl_node(n->stmt.if_.cond);
+        printf(") ");
+        crawl_node(n->stmt.if_.body);
+        if (n->stmt.if_.else_) {
+            printf(" else ");
+            crawl_node(n->stmt.if_.else_);
+        }
+        break;
     case STMT_RETURN:
         printf("return");
         if (n->stmt.return_.expr) {

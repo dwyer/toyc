@@ -25,6 +25,7 @@ typedef struct {
 
 static node_t *parse_decl(parser_t *p);
 static node_t *parse_expr(parser_t *p);
+static node_t *parse_stmt(parser_t *p);
 
 DA_DEF_HELPERS(node, node_t *);
 
@@ -207,6 +208,49 @@ static node_t *parse_simple_stmt(parser_t *p)
     return copy(&tmp);
 }
 
+static node_t *parse_block_stmt(parser_t *p)
+{
+    expect(p, token_LBRACE);
+    da_t stmts;
+    da_init_node(&stmts);
+    while (p->tok != token_RBRACE) {
+        da_append_node(&stmts, parse_stmt(p));
+    }
+    da_append_node(&stmts, NULL);
+    expect(p, token_RBRACE);
+    node_t tmp = {
+        .t=STMT_BLOCK,
+        .stmt.block.stmts = stmts.data,
+    };
+    return copy(&tmp);
+}
+
+static node_t *parse_if_stmt(parser_t *p)
+{
+    expect(p, token_IF);
+    expect(p, token_LPAREN);
+    node_t *cond = parse_expr(p);
+    expect(p, token_RPAREN);
+    node_t *body = parse_block_stmt(p);
+    node_t *else_ = NULL;
+    if (accept(p, token_ELSE)) {
+        if (p->tok == token_IF) {
+            else_ = parse_if_stmt(p);
+        } else {
+            else_ = parse_block_stmt(p);
+        }
+    }
+    node_t tmp = {
+        .t = STMT_IF,
+        .stmt.if_ = {
+            .cond = cond,
+            .body = body,
+            .else_ = else_,
+        },
+    };
+    return copy(&tmp);
+}
+
 static node_t *parse_stmt(parser_t *p)
 {
     switch (p->tok) {
@@ -223,6 +267,8 @@ static node_t *parse_stmt(parser_t *p)
         return parse_simple_stmt(p);
     case token_RETURN:
         return parse_return_stmt(p);
+    case token_IF:
+        return parse_if_stmt(p);
     case token_SEMICOLON:
         do {
             node_t tmp = { .t = STMT_EMPTY, };
@@ -233,23 +279,6 @@ static node_t *parse_stmt(parser_t *p)
         P_PANIC(p, "expected statement: got %s", p->lit);
         return NULL;
     }
-}
-
-static node_t *parse_block_stmt(parser_t *p)
-{
-    expect(p, token_LBRACE);
-    da_t stmts;
-    da_init_node(&stmts);
-    while (p->tok != token_RBRACE) {
-        da_append_node(&stmts, parse_stmt(p));
-    }
-    da_append_node(&stmts, NULL);
-    expect(p, token_RBRACE);
-    node_t tmp = {
-        .t=STMT_BLOCK,
-        .stmt.block.stmts = stmts.data,
-    };
-    return copy(&tmp);
 }
 
 static node_t *parse_func_decl(parser_t *p)
@@ -347,7 +376,7 @@ static node_t *parse_decl(parser_t *p)
     case token_EOF:
         return NULL;
     default:
-        P_PANIC(p, "bad tok: %d: %s", p->tok, p->lit);
+        P_PANIC(p, "unexpected token: %s", token_string(p->tok));
         break;
     }
 }
