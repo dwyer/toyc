@@ -1,16 +1,7 @@
-type u8 uint8_t;
-
-var a int;
-var _asd int;
-
 type vec2 struct {
     var x int;
     var y int;
 };
-
-func vec2.len() int {
-    return 0;
-}
 
 func main() int {
     return 0;

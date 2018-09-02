@@ -23,7 +23,7 @@ cmp=$1
 success_total=0
 failure_total=0
 
-num_stages=9
+num_stages=1
 
 for i in `seq 1 $num_stages`; do
     success=0
@@ -31,8 +31,8 @@ for i in `seq 1 $num_stages`; do
     echo "===================================================="
     echo "STAGE $i"
     echo "===================Valid Programs==================="
-    for prog in `ls stage_$i/valid/{,**/}*.c 2>/dev/null`; do
-        gcc -w $prog
+    for prog in `ls stages/stage_$i/valid/{,**/}*.kc 2>/dev/null`; do
+        gcc -w ${prog%.kc}.c
         expected_out=`./a.out`
         expected_exit_code=$?
         rm a.out
@@ -65,26 +65,26 @@ for i in `seq 1 $num_stages`; do
         fi
         rm $base      
     done
-    echo "===================Invalid Programs================="
-    for prog in `ls stage_$i/invalid/{,**/}*.c 2>/dev/null`; do
-        base="${prog%.*}" #name of executable (filename w/out extension)
-        test_name="${base##*invalid/}"
+    # echo "===================Invalid Programs================="
+    # for prog in `ls stage_$i/invalid/{,**/}*.c 2>/dev/null`; do
+    #     base="${prog%.*}" #name of executable (filename w/out extension)
+    #     test_name="${base##*invalid/}"
 
-        $cmp $prog >/dev/null 2>&1
-        failed=$? #failed, as we expect, if exit code != 0
+    #     $cmp $prog >/dev/null 2>&1
+    #     failed=$? #failed, as we expect, if exit code != 0
 
-        printf '%s' "$test_name"
-        printf '%.*s' $((padlength - ${#test_name})) "$padding_dots"
+    #     printf '%s' "$test_name"
+    #     printf '%.*s' $((padlength - ${#test_name})) "$padding_dots"
 
-        if [[ -f $base || -f $base".s" ]] #make sure neither executable nor assembly was produced
-        then
-            test_failure
-            rm $base 2>/dev/null
-            rm $base".s" 2>/dev/null
-        else
-            test_success
-        fi
-    done
+    #     if [[ -f $base || -f $base".s" ]] #make sure neither executable nor assembly was produced
+    #     then
+    #         test_failure
+    #         rm $base 2>/dev/null
+    #         rm $base".s" 2>/dev/null
+    #     else
+    #         test_success
+    #     fi
+    # done
     echo "===================Stage $i Summary================="
     printf "%d successes, %d failures\n" $success $fail
     ((success_total=success_total+success))
