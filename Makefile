@@ -7,8 +7,8 @@ LDFLAGS+=-L../repo/mono/lib/da -lda
 
 main: main.o crawl.o parser.o scanner.o token.o
 
-crawl.o: ast.h crawl.h
-main.o: ast.h crawl.h parser.h
+crawl.o: ast.h crawl.h token.h
+main.o: ast.h crawl.h parser.h token.h
 scanner.o: scanner.h token.h
 parser.o: ast.h parser.h scanner.h token.h
 token.o: token.h

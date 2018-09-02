@@ -1,6 +1,8 @@
 #ifndef EXPR_H
 #define EXPR_H
 
+#include "token.h"
+
 typedef struct _node node_t;
 
 typedef struct _file file_t;
@@ -15,6 +17,7 @@ typedef enum {
     EXPR_STRUCT,
     EXPR_UNARY,
 
+    STMT_ASSIGN,
     STMT_BLOCK,
     STMT_DECL,
     STMT_EMPTY,
@@ -64,6 +67,12 @@ struct _node {
         } expr;
 
         union { // stmt
+
+            struct {
+                node_t *lhs;
+                token_t tok;
+                node_t *rhs;
+            } assign;
 
             struct {
                 node_t **stmts;

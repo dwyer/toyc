@@ -18,7 +18,7 @@
 
 typedef struct {
     const char *filename;
-    struct scanner scanner;
+    scanner_t scanner;
     token_t tok;
     char lit[BUFSIZ];
 } parser_t;
@@ -190,11 +190,26 @@ static node_t *parse_return_stmt(parser_t *p)
     return copy(&tmp);
 }
 
+static node_t *parse_simple_stmt(parser_t *p)
+{
+    node_t *lhs = parse_ident(p);
+    expect(p, token_ASSIGN);
+    node_t *rhs = parse_expr(p);
+    expect(p, token_SEMICOLON);
+    node_t tmp = {
+        .t = STMT_ASSIGN,
+        .stmt.assign = {
+            .lhs = lhs,
+            .tok = token_ASSIGN,
+            .rhs = rhs,
+        }
+    };
+    return copy(&tmp);
+}
+
 static node_t *parse_stmt(parser_t *p)
 {
     switch (p->tok) {
-    case token_RETURN:
-        return parse_return_stmt(p);
     case token_VAR:
     case token_TYPE:
         do {
@@ -204,6 +219,10 @@ static node_t *parse_stmt(parser_t *p)
             };
             return copy(&tmp);
         } while (0);
+    case token_IDENT:
+        return parse_simple_stmt(p);
+    case token_RETURN:
+        return parse_return_stmt(p);
     case token_SEMICOLON:
         do {
             node_t tmp = { .t = STMT_EMPTY, };

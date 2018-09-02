@@ -62,6 +62,12 @@ extern void crawl_node(const node_t *n)
         crawl_node(n->expr.unary.expr);
         break;
 
+    case STMT_ASSIGN:
+        crawl_node(n->stmt.assign.lhs);
+        printf("%s", token_string(n->stmt.assign.tok));
+        crawl_node(n->stmt.assign.rhs);
+        printf(";\n");
+        break;
     case STMT_BLOCK:
         printf("{\n");
         node_t **stmts = n->stmt.block.stmts;

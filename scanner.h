@@ -3,16 +3,16 @@
 
 #include "token.h"
 
-struct scanner {
+typedef struct {
     const char *src;
     int src_len;
     int offset;
     int ch;
     int line;
     int column;
-};
+} scanner_t;
 
-extern void scanner_init(struct scanner *s, char *src, int len);
-extern token_t scanner_scan(struct scanner *s, char *lit);
+extern void scanner_init(scanner_t *s, char *src, int len);
+extern token_t scanner_scan(scanner_t *s, char *lit);
 
 #endif

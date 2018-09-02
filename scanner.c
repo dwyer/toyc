@@ -2,17 +2,7 @@
 #include "token.h"
 #include "log.h" // PANIC
 
-static int is_letter(int ch)
-{
-    return ('a' <= ch && ch <= 'z') || ('A' <= ch && ch <= 'Z') || ch == '_';
-}
-
-static int is_digit(int ch)
-{
-    return '0' <= ch && ch <= '9';
-}
-
-static void next(struct scanner *s)
+static void next(scanner_t *s)
 {
     if (s->ch == token_EOF)
         return;
@@ -25,7 +15,7 @@ static void next(struct scanner *s)
     }
 }
 
-extern void scanner_init(struct scanner *s, char *src, int len)
+extern void scanner_init(scanner_t *s, char *src, int len)
 {
     s->line = 1;
     s->column = 1;
@@ -35,7 +25,17 @@ extern void scanner_init(struct scanner *s, char *src, int len)
     next(s);
 }
 
-static int scan_identifier(struct scanner *s, char *lit)
+static int is_letter(int ch)
+{
+    return ('a' <= ch && ch <= 'z') || ('A' <= ch && ch <= 'Z') || ch == '_';
+}
+
+static int is_digit(int ch)
+{
+    return '0' <= ch && ch <= '9';
+}
+
+static int scan_identifier(scanner_t *s, char *lit)
 {
     int i = 0;
     while (is_letter(s->ch) || is_digit(s->ch)) {
@@ -46,7 +46,7 @@ static int scan_identifier(struct scanner *s, char *lit)
     return i;
 }
 
-static token_t scan_number(struct scanner *s, char *lit)
+static token_t scan_number(scanner_t *s, char *lit)
 {
     while (is_digit(s->ch)) {
         *lit++ = s->ch;
@@ -56,13 +56,13 @@ static token_t scan_number(struct scanner *s, char *lit)
     return token_INT;
 }
 
-static void skip_whitespace(struct scanner *s)
+static void skip_whitespace(scanner_t *s)
 {
     while (s->ch == ' ' || s->ch == '\t' || s->ch == '\n' || s->ch == '\r')
         next(s);
 }
 
-static token_t switch2(struct scanner *s, token_t tok0, token_t tok1)
+static token_t switch2(scanner_t *s, token_t tok0, token_t tok1)
 {
     if (s->ch == '=') {
         next(s);
@@ -71,7 +71,7 @@ static token_t switch2(struct scanner *s, token_t tok0, token_t tok1)
     return tok0;
 }
 
-static token_t switch3(struct scanner *s, token_t tok0, token_t tok1, int ch2,
+static token_t switch3(scanner_t *s, token_t tok0, token_t tok1, int ch2,
         token_t tok2)
 {
     if (s->ch == '=') {
@@ -85,7 +85,7 @@ static token_t switch3(struct scanner *s, token_t tok0, token_t tok1, int ch2,
     return tok0;
 }
 
-static token_t switch4(struct scanner *s, token_t tok0, token_t tok1, int ch2,
+static token_t switch4(scanner_t *s, token_t tok0, token_t tok1, int ch2,
         token_t tok2, token_t tok3)
 {
     if (s->ch == '=') {
@@ -103,7 +103,7 @@ static token_t switch4(struct scanner *s, token_t tok0, token_t tok1, int ch2,
     return tok0;
 }
 
-extern token_t scanner_scan(struct scanner *s, char *lit)
+extern token_t scanner_scan(scanner_t *s, char *lit)
 {
     token_t tok;
     skip_whitespace(s);
