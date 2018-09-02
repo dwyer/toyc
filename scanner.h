@@ -8,8 +8,6 @@ struct scanner {
     int src_len;
     int offset;
     int ch;
-    int isdelim;
-    int iswhite;
     int line;
     int column;
 };

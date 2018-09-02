@@ -19,7 +19,7 @@
 typedef struct {
     const char *filename;
     struct scanner scanner;
-    int tok;
+    token_t tok;
     char lit[BUFSIZ];
 } parser_t;
 
@@ -68,11 +68,11 @@ static void parse_arg_list(parser_t *p)
 static node_t *parse_ident(parser_t *p)
 {
     node_t tmp = {.t = EXPR_IDENT};
-    if (p->tok == TOKEN_IDENT) {
+    if (p->tok == token_IDENT) {
         tmp.expr.ident.name = strdup(p->lit);
         next(p);
     } else {
-        expect(p, TOKEN_IDENT);
+        expect(p, token_IDENT);
         tmp.expr.ident.name = strdup("_");
     }
     return copy(&tmp);
@@ -81,9 +81,9 @@ static node_t *parse_ident(parser_t *p)
 static node_t *parse_operand(parser_t *p)
 {
     switch (p->tok) {
-    case TOKEN_IDENT:
+    case token_IDENT:
         return parse_ident(p);
-    case TOKEN_NUMBER:
+    case token_INT:
         do {
             node_t tmp = {
                 .t = EXPR_BASIC,
@@ -173,7 +173,7 @@ static node_t *parse_expr(parser_t *p)
 
 static node_t *parse_return_stmt(parser_t *p)
 {
-    expect(p, TOKEN_RETURN);
+    expect(p, token_RETURN);
     node_t tmp = {
         .t = STMT_RETURN,
         .stmt.return_.expr = p->tok == ';' ? NULL : parse_expr(p),
@@ -185,10 +185,10 @@ static node_t *parse_return_stmt(parser_t *p)
 static node_t *parse_stmt(parser_t *p)
 {
     switch (p->tok) {
-    case TOKEN_RETURN:
+    case token_RETURN:
         return parse_return_stmt(p);
-    case TOKEN_VAR:
-    case TOKEN_TYPE:
+    case token_VAR:
+    case token_TYPE:
         do {
             node_t tmp = {
                 .t = STMT_DECL,
@@ -226,7 +226,7 @@ static node_t *parse_block_stmt(parser_t *p)
 
 static node_t *parse_func_decl(parser_t *p)
 {
-    expect(p, TOKEN_FUNC);
+    expect(p, token_FUNC);
     node_t *recv = NULL;
     node_t *ident = parse_ident(p);
     if (accept(p, '.')) {
@@ -249,7 +249,7 @@ static node_t *parse_func_decl(parser_t *p)
 
 static node_t *parse_struct_type(parser_t *p)
 {
-    expect(p, TOKEN_STRUCT);
+    expect(p, token_STRUCT);
     expect(p, '{');
     da_t fields;
     da_init_node(&fields);
@@ -268,9 +268,9 @@ static node_t *parse_struct_type(parser_t *p)
 static node_t *parse_type_expr(parser_t *p)
 {
     switch (p->tok) {
-    case TOKEN_IDENT:
+    case token_IDENT:
         return parse_ident(p);
-    case TOKEN_STRUCT:
+    case token_STRUCT:
         return parse_struct_type(p);
     default:
         P_PANIC(p, "invalid token for parse_type_expr: %d", p->tok);
@@ -280,7 +280,7 @@ static node_t *parse_type_expr(parser_t *p)
 
 static node_t *parse_type_decl(parser_t *p)
 {
-    expect(p, TOKEN_TYPE);
+    expect(p, token_TYPE);
     node_t tmp = {
         .t = DECL_TYPE,
         .decl.type = {
@@ -294,7 +294,7 @@ static node_t *parse_type_decl(parser_t *p)
 
 static node_t *parse_var_decl(parser_t *p)
 {
-    expect(p, TOKEN_VAR);
+    expect(p, token_VAR);
     node_t tmp = {
         .t = DECL_VAR,
         .decl.var = {
@@ -310,11 +310,11 @@ static node_t *parse_var_decl(parser_t *p)
 static node_t *parse_decl(parser_t *p)
 {
     switch (p->tok) {
-    case TOKEN_FUNC:
+    case token_FUNC:
         return parse_func_decl(p);
-    case TOKEN_TYPE:
+    case token_TYPE:
         return parse_type_decl(p);
-    case TOKEN_VAR:
+    case token_VAR:
         return parse_var_decl(p);
     case '\0':
         return NULL;
