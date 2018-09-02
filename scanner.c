@@ -1,5 +1,6 @@
 #include "scanner.h"
 #include "token.h"
+#include "log.h" // PANIC
 
 static int is_letter(int ch)
 {
@@ -13,7 +14,7 @@ static int is_digit(int ch)
 
 static void next(struct scanner *s)
 {
-    if (!s->ch)
+    if (s->ch == token_EOF)
         return;
     s->column++;
     s->ch = s->src[s->offset++];
@@ -63,7 +64,6 @@ static void skip_whitespace(struct scanner *s)
 
 extern token_t scanner_scan(struct scanner *s, char *lit)
 {
-    char *st = lit;
     token_t tok;
     skip_whitespace(s);
     if (is_letter(s->ch)) {
@@ -75,11 +75,38 @@ extern token_t scanner_scan(struct scanner *s, char *lit)
     } else if (is_digit(s->ch)) {
         tok = scan_number(s, lit);
     } else {
-        tok = s->ch;
-        if (s->ch != '\0')
-            *st++ = s->ch;
-        *st = '\0';
+        int ch = s->ch;
         next(s);
+        switch (ch) {
+        case '\0':
+            return token_EOF;
+        case '!':
+            return token_NOT;
+        case '(':
+            return token_LPAREN;
+        case ')':
+            return token_RPAREN;
+        case '*':
+            return token_MUL;
+        case '+':
+            return token_ADD;
+        case '-':
+            return token_SUB;
+        case '.':
+            return token_PERIOD;
+        case '/':
+            return token_QUO;
+        case ';':
+            return token_SEMICOLON;
+        case '{':
+            return token_LBRACE;
+        case '}':
+            return token_RBRACE;
+        case '~':
+            return token_BITWISE_NOT;
+        default:
+            PANIC("shit is illegal yo: `%c'\n", ch);
+        }
     }
     return tok;
 }

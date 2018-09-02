@@ -3,6 +3,7 @@
 
 #include <execinfo.h> // backtrace
 #include <stdio.h>
+#include <stdlib.h> // exit
 
 #define LOG_LEVEL_ALL 0
 #define LOG_LEVEL_VERBOSE 1

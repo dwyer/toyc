@@ -33,6 +33,7 @@ static struct token_string_pair {
     {token_SHL,     "<<"},
     {token_SHR,     ">>"},
     {token_AND_NOT, "&^"},
+    {token_BITWISE_NOT, "~"},
 
     {token_ADD_ASSIGN, "+="},
     {token_SUB_ASSIGN, "-="},

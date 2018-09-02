@@ -3,7 +3,7 @@
 
 typedef enum {
     // Special tokens
-    token_ILLEGAL = 1000,
+    token_ILLEGAL,
     token_EOF,
     token_COMMENT,
 
@@ -32,6 +32,7 @@ typedef enum {
     token_SHL,     // <<
     token_SHR,     // >>
     token_AND_NOT, // &^
+    token_BITWISE_NOT,
 
     token_ADD_ASSIGN, // +=
     token_SUB_ASSIGN, // -=

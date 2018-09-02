@@ -1,4 +1,5 @@
 #include "crawl.h"
+#include "token.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -38,7 +39,7 @@ extern void crawl_node(const node_t *n)
         break;
     case EXPR_BINARY:
         crawl_node(n->expr.binary.x);
-        printf(" %c ", n->expr.binary.op);
+        printf(" %s ", token_string(n->expr.binary.op));
         crawl_node(n->expr.binary.y);
         break;
     case EXPR_IDENT:
@@ -57,7 +58,7 @@ extern void crawl_node(const node_t *n)
         printf("}");
         break;
     case EXPR_UNARY:
-        printf("%c", n->expr.unary.op);
+        printf("%s", token_string(n->expr.unary.op));
         crawl_node(n->expr.unary.expr);
         break;
 
