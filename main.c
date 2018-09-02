@@ -39,7 +39,7 @@ int main(int argc, char *argv[])
     fclose(fp);
 
     file_t *f = parse_file(filename, src, src_len);
-    decl_t **decls = f->decls;
+    node_t **decls = f->decls;
     while (decls && *decls)
         crawl_decl(*decls++);
 

@@ -10,9 +10,9 @@
 
 #include <da.h>
 
-DA_DEF_HELPERS(decl, decl_t *);
-DA_DEF_HELPERS(expr, expr_t *);
-DA_DEF_HELPERS(stmt, stmt_t *);
+DA_DEF_HELPERS(decl, node_t *);
+DA_DEF_HELPERS(expr, node_t *);
+DA_DEF_HELPERS(stmt, node_t *);
 
 typedef struct {
     const char *filename;
@@ -46,7 +46,7 @@ void expect(parser_t *p, int tok)
     next(p);
 }
 
-expr_t *parse_expr(parser_t *p);
+node_t *parse_expr(parser_t *p);
 
 void parse_arg_list(parser_t *p)
 {
@@ -61,9 +61,9 @@ void parse_arg_list(parser_t *p)
     expect(p, ')');
 }
 
-expr_t *parse_ident(parser_t *p)
+node_t *parse_ident(parser_t *p)
 {
-    expr_t expr = {.t = EXPR_IDENT};
+    node_t expr = {.t = EXPR_IDENT};
     if (p->tok == TOKEN_IDENT) {
         expr.expr.ident.name = strdup(p->lit);
         next(p);
@@ -74,9 +74,9 @@ expr_t *parse_ident(parser_t *p)
     return copy(&expr);
 }
 
-expr_t *parse_expr(parser_t *p)
+node_t *parse_expr(parser_t *p)
 {
-    expr_t expr = {};
+    node_t expr = {};
     switch (p->tok) {
     case '+':
     case '-':
@@ -87,7 +87,7 @@ expr_t *parse_expr(parser_t *p)
         break;
     case TOKEN_IDENT:
         do {
-            expr_t *ident = parse_ident(p);
+            node_t *ident = parse_ident(p);
             return ident;
             /* next(p); */
             /* if (p->tok == '(') { */
@@ -108,9 +108,9 @@ expr_t *parse_expr(parser_t *p)
     return copy(&expr);
 }
 
-stmt_t *parse_return_stmt(parser_t *p)
+node_t *parse_return_stmt(parser_t *p)
 {
-    stmt_t stmt = {
+    node_t stmt = {
         .t = STMT_RETURN,
     };
     expect(p, TOKEN_RETURN);
@@ -121,11 +121,11 @@ stmt_t *parse_return_stmt(parser_t *p)
     return copy(&stmt);
 }
 
-decl_t *parse_decl(parser_t *p);
+node_t *parse_decl(parser_t *p);
 
-stmt_t *parse_stmt(parser_t *p)
+node_t *parse_stmt(parser_t *p)
 {
-    stmt_t stmt = {};
+    node_t stmt = {};
     switch (p->tok) {
     case TOKEN_RETURN:
         return parse_return_stmt(p);
@@ -145,7 +145,7 @@ stmt_t *parse_stmt(parser_t *p)
     return copy(&stmt);
 }
 
-stmt_t *parse_block_stmt(parser_t *p)
+node_t *parse_block_stmt(parser_t *p)
 {
     da_t stmts;
     da_init_stmt(&stmts);
@@ -155,18 +155,18 @@ stmt_t *parse_block_stmt(parser_t *p)
     }
     da_append_stmt(&stmts, NULL);
     expect(p, '}');
-    stmt_t stmt = {
+    node_t stmt = {
         .t=STMT_BLOCK,
         .stmt.block.stmts = stmts.data,
     };
     return copy(&stmt);
 }
 
-decl_t *parse_func_decl(parser_t *p)
+node_t *parse_func_decl(parser_t *p)
 {
-    decl_t decl = {.t = DECL_FUNC,};
+    node_t decl = {.t = DECL_FUNC,};
     expect(p, TOKEN_FUNC);
-    expr_t *ident = parse_ident(p);
+    node_t *ident = parse_ident(p);
     if (p->tok == '.') {
         expect(p, '.');
         decl.decl.func.recv = ident;
@@ -180,7 +180,7 @@ decl_t *parse_func_decl(parser_t *p)
     return copy(&decl);
 }
 
-expr_t *parse_struct_type(parser_t *p)
+node_t *parse_struct_type(parser_t *p)
 {
     expect(p, TOKEN_STRUCT);
     expect(p, '{');
@@ -191,14 +191,14 @@ expr_t *parse_struct_type(parser_t *p)
     }
     da_append_decl(&fields, NULL);
     expect(p, '}');
-    expr_t expr = {
+    node_t expr = {
         .t = EXPR_STRUCT,
         .expr.struct_.fields = da_get(&fields, 0),
     };
     return copy(&expr);
 }
 
-expr_t *parse_type_expr(parser_t *p)
+node_t *parse_type_expr(parser_t *p)
 {
     switch (p->tok) {
     case TOKEN_IDENT:
@@ -211,9 +211,9 @@ expr_t *parse_type_expr(parser_t *p)
     }
 }
 
-decl_t *parse_type_decl(parser_t *p)
+node_t *parse_type_decl(parser_t *p)
 {
-    decl_t decl = {.t = DECL_TYPE};
+    node_t decl = {.t = DECL_TYPE};
     expect(p, TOKEN_TYPE);
     decl.decl.type.name = parse_ident(p);
     decl.decl.type.type = parse_type_expr(p);
@@ -221,9 +221,9 @@ decl_t *parse_type_decl(parser_t *p)
     return copy(&decl);
 }
 
-decl_t *parse_var_decl(parser_t *p)
+node_t *parse_var_decl(parser_t *p)
 {
-    decl_t decl = {.t = DECL_VAR};
+    node_t decl = {.t = DECL_VAR};
     expect(p, TOKEN_VAR);
     decl.decl.var.name = parse_ident(p);
     decl.decl.var.type = parse_ident(p);
@@ -236,7 +236,7 @@ decl_t *parse_var_decl(parser_t *p)
     return copy(&decl);
 }
 
-decl_t *parse_decl(parser_t *p)
+node_t *parse_decl(parser_t *p)
 {
     switch (p->tok) {
     case TOKEN_FUNC:

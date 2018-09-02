@@ -3,7 +3,7 @@
 #include <assert.h>
 #include <stdio.h>
 
-void crawl_expr(expr_t *expr)
+void crawl_expr(node_t *expr)
 {
     assert(expr);
     switch (expr->t) {
@@ -15,7 +15,7 @@ void crawl_expr(expr_t *expr)
         break;
     case EXPR_STRUCT:
         printf("struct {\n");
-        decl_t **fields = expr->expr.struct_.fields;
+        node_t **fields = expr->expr.struct_.fields;
         while (*fields)
             crawl_decl(*fields++);
         printf("}");
@@ -30,13 +30,13 @@ void crawl_expr(expr_t *expr)
     }
 }
 
-void crawl_stmt(stmt_t *stmt)
+void crawl_stmt(node_t *stmt)
 {
     assert(stmt);
     switch (stmt->t) {
     case STMT_BLOCK:
         printf("{\n");
-        stmt_t **stmts = stmt->stmt.block.stmts;
+        node_t **stmts = stmt->stmt.block.stmts;
         while (stmts && *stmts) 
             crawl_stmt(*stmts++);
         printf("}\n");
@@ -60,7 +60,7 @@ void crawl_stmt(stmt_t *stmt)
     }
 }
 
-void crawl_decl(decl_t *decl)
+void crawl_decl(node_t *decl)
 {
     assert(decl);
     switch (decl->t) {

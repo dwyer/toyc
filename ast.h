@@ -3,10 +3,6 @@
 
 typedef struct _node node_t;
 
-typedef node_t decl_t __attribute__((deprecated));
-typedef node_t expr_t __attribute__((deprecated));
-typedef node_t stmt_t __attribute__((deprecated));
-
 typedef struct _file file_t;
 
 typedef enum {
@@ -43,8 +39,8 @@ struct _node {
 
             struct {
                 int op;
-                expr_t *expr1;
-                expr_t *expr2;
+                node_t *expr1;
+                node_t *expr2;
             } binary;
 
             struct {
@@ -52,12 +48,12 @@ struct _node {
             } ident;
 
             struct {
-                decl_t **fields;
+                node_t **fields;
             } struct_;
 
             struct {
                 int op;
-                expr_t *expr;
+                node_t *expr;
             } unary;
 
         } expr;
@@ -65,15 +61,15 @@ struct _node {
         union { // stmt
 
             struct {
-                stmt_t **stmts;
+                node_t **stmts;
             } block;
 
             struct {
-                decl_t *decl;
+                node_t *decl;
             } decl;
 
             struct {
-                expr_t *expr;
+                node_t *expr;
             } return_;
 
         } stmt;
@@ -81,21 +77,21 @@ struct _node {
         union { // decl
 
             struct {
-                expr_t *recv;
-                expr_t *name;
-                expr_t *type;
-                stmt_t *body;
+                node_t *recv;
+                node_t *name;
+                node_t *type;
+                node_t *body;
             } func;
 
             struct {
-                expr_t *name;
-                expr_t *type;
+                node_t *name;
+                node_t *type;
             } type;
 
             struct {
-                expr_t *name;
-                expr_t *type;
-                expr_t *value;
+                node_t *name;
+                node_t *type;
+                node_t *value;
             } var;
 
         } decl;
@@ -103,7 +99,7 @@ struct _node {
 };
 
 struct _file {
-    decl_t **decls;
+    node_t **decls;
 };
 
 #endif
