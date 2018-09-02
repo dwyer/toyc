@@ -3,96 +3,80 @@
 #include <assert.h>
 #include <stdio.h>
 
-void crawl_expr(node_t *expr)
+extern void crawl_node(const node_t *n)
 {
-    assert(expr);
-    switch (expr->t) {
+    assert(n);
+    switch (n->t) {
+
+    case DECL_FUNC:
+        printf("func ");
+        if (n->decl.func.recv) {
+            crawl_node(n->decl.func.recv);
+            printf(".");
+        }
+        crawl_node(n->decl.func.name);
+        printf("() ");
+        crawl_node(n->decl.func.type);
+        crawl_node(n->decl.func.body);
+        break;
+    case DECL_TYPE:
+        printf("type ");
+        crawl_node(n->decl.type.name);
+        printf(" ");
+        crawl_node(n->decl.type.type);
+        printf(";\n");
+        break;
+    case DECL_VAR:
+        printf("var ");
+        crawl_node(n->decl.var.name);
+        printf(" ");
+        crawl_node(n->decl.var.type);
+        if (n->decl.var.value) {
+            printf(" = ");
+            crawl_node(n->decl.var.value);
+        }
+        printf(";\n");
+        break;
+
     case EXPR_BASIC:
-        printf("%s", expr->expr.basic.value);
+        printf("%s", n->expr.basic.value);
         break;
     case EXPR_IDENT:
-        printf("%s", expr->expr.ident.name);
+        printf("%s", n->expr.ident.name);
         break;
     case EXPR_STRUCT:
         printf("struct {\n");
-        node_t **fields = expr->expr.struct_.fields;
+        node_t **fields = n->expr.struct_.fields;
         while (*fields)
-            crawl_decl(*fields++);
+            crawl_node(*fields++);
         printf("}");
         break;
     case EXPR_UNARY:
-        printf("%c", expr->expr.unary.op);
-        crawl_expr(expr->expr.unary.expr);
+        printf("%c", n->expr.unary.op);
+        crawl_node(n->expr.unary.expr);
         break;
-    default:
-        printf("??? ");
-        break;
-    }
-}
 
-void crawl_stmt(node_t *stmt)
-{
-    assert(stmt);
-    switch (stmt->t) {
     case STMT_BLOCK:
         printf("{\n");
-        node_t **stmts = stmt->stmt.block.stmts;
-        while (stmts && *stmts) 
-            crawl_stmt(*stmts++);
+        node_t **stmts = n->stmt.block.stmts;
+        while (stmts && *stmts)
+            crawl_node(*stmts++);
         printf("}\n");
         break;
     case STMT_DECL:
-        crawl_decl(stmt->stmt.decl.decl);
+        crawl_node(n->stmt.decl.decl);
         break;
     case STMT_EMPTY:
         break;
     case STMT_RETURN:
         printf("return");
-        if (stmt->stmt.return_.expr) {
+        if (n->stmt.return_.expr) {
             printf(" ");
-            crawl_expr(stmt->stmt.return_.expr);
+            crawl_node(n->stmt.return_.expr);
         }
         printf(";\n");
         break;
-    default:
-        printf("??? ");
-        break;
-    }
-}
 
-void crawl_decl(node_t *decl)
-{
-    assert(decl);
-    switch (decl->t) {
-    case DECL_FUNC:
-        printf("func ");
-        if (decl->decl.func.recv) {
-            crawl_expr(decl->decl.func.recv);
-            printf(".");
-        }
-        crawl_expr(decl->decl.func.name);
-        printf("() ");
-        crawl_expr(decl->decl.func.type);
-        crawl_stmt(decl->decl.func.body);
-        break;
-    case DECL_TYPE:
-        printf("type ");
-        crawl_expr(decl->decl.type.name);
-        printf(" ");
-        crawl_expr(decl->decl.type.type);
-        printf(";\n");
-        break;
-    case DECL_VAR:
-        printf("var ");
-        crawl_expr(decl->decl.var.name);
-        printf(" ");
-        crawl_expr(decl->decl.var.type);
-        if (decl->decl.var.value) {
-            printf(" = ");
-            crawl_expr(decl->decl.var.value);
-        }
-        printf(";\n");
-        break;
     default:
         printf("??? ");
         break;

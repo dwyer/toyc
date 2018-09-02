@@ -41,7 +41,7 @@ int main(int argc, char *argv[])
     file_t *f = parse_file(filename, src, src_len);
     node_t **decls = f->decls;
     while (decls && *decls)
-        crawl_decl(*decls++);
+        crawl_node(*decls++);
 
     free(src);
 
