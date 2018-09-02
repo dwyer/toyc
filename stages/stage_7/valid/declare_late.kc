@@ -1,0 +1,8 @@
+func main() int {
+    var a int = 2;
+    {
+        a = 3;
+        var a int = 0;
+    }
+    return a;
+}

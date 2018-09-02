@@ -1,0 +1,15 @@
+func main() int {
+    var a int = 0;
+    if (a) {
+        var b int = 2;
+        return b;
+    } else {
+        var c int = 3;
+        if (a < c) {
+            return 4;
+        } else {
+            return 5;
+        }
+    }
+    return a;
+}

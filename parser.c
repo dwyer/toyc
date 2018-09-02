@@ -267,6 +267,8 @@ static node_t *parse_stmt(parser_t *p)
         return parse_simple_stmt(p);
     case token_RETURN:
         return parse_return_stmt(p);
+    case token_LBRACE:
+        return parse_block_stmt(p);
     case token_IF:
         return parse_if_stmt(p);
     case token_SEMICOLON:

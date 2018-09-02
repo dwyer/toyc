@@ -1,0 +1,6 @@
+func main() int {
+    if (5) {
+        var i int = 0;
+        return i;
+    }
+}
