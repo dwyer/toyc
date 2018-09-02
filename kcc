@@ -3,5 +3,5 @@ kcfile=$1
 cfile="${kcfile}.c"
 binfile="${kcfile%.kc}"
 ./main ${kcfile} >${cfile}
-cc -o ${binfile} ${cfile}
+cc -w -o ${binfile} ${cfile}
 rm -f ${cfile}

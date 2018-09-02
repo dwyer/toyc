@@ -142,7 +142,15 @@ static node_t *parse_binary_expr(parser_t *p)
     node_t *x = parse_unary_expr(p);
     switch (p->tok) {
     case token_ADD:
+    case token_EQL:
+    case token_GEQ:
+    case token_GTR:
+    case token_LAND:
+    case token_LEQ:
+    case token_LOR:
+    case token_LSS:
     case token_MUL:
+    case token_NEQ:
     case token_QUO:
     case token_SUB:
         do {
@@ -301,7 +309,7 @@ static node_t *parse_var_decl(parser_t *p)
         .decl.var = {
             .name = parse_ident(p),
             .type = parse_ident(p),
-            .value = accept(p, token_EQL) ? parse_expr(p) : NULL,
+            .value = accept(p, token_ASSIGN) ? parse_expr(p) : NULL,
         },
     };
     expect(p, token_SEMICOLON);

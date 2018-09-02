@@ -62,6 +62,47 @@ static void skip_whitespace(struct scanner *s)
         next(s);
 }
 
+static token_t switch2(struct scanner *s, token_t tok0, token_t tok1)
+{
+    if (s->ch == '=') {
+        next(s);
+        return tok1;
+    }
+    return tok0;
+}
+
+static token_t switch3(struct scanner *s, token_t tok0, token_t tok1, int ch2,
+        token_t tok2)
+{
+    if (s->ch == '=') {
+        next(s);
+        return tok1;
+    }
+    if (s->ch == ch2) {
+        next(s);
+        return tok2;
+    }
+    return tok0;
+}
+
+static token_t switch4(struct scanner *s, token_t tok0, token_t tok1, int ch2,
+        token_t tok2, token_t tok3)
+{
+    if (s->ch == '=') {
+        next(s);
+        return tok1;
+    }
+    if (s->ch == ch2) {
+        next(s);
+        if (s->ch == '=') {
+            next(s);
+            return tok3;
+        }
+        return tok2;
+    }
+    return tok0;
+}
+
 extern token_t scanner_scan(struct scanner *s, char *lit)
 {
     token_t tok;
@@ -79,31 +120,59 @@ extern token_t scanner_scan(struct scanner *s, char *lit)
         next(s);
         switch (ch) {
         case '\0':
-            return token_EOF;
-        case '!':
-            return token_NOT;
+            tok = token_EOF;
+            break;
         case '(':
-            return token_LPAREN;
+            tok = token_LPAREN;
+            break;
         case ')':
-            return token_RPAREN;
+            tok = token_RPAREN;
+            break;
         case '*':
-            return token_MUL;
+            tok = token_MUL;
+            break;
         case '+':
-            return token_ADD;
+            tok = token_ADD;
+            break;
         case '-':
-            return token_SUB;
+            tok = token_SUB;
+            break;
         case '.':
-            return token_PERIOD;
+            tok = token_PERIOD;
+            break;
         case '/':
-            return token_QUO;
+            tok = token_QUO;
+            break;
         case ';':
-            return token_SEMICOLON;
+            tok = token_SEMICOLON;
+            break;
         case '{':
-            return token_LBRACE;
+            tok = token_LBRACE;
+            break;
         case '}':
-            return token_RBRACE;
+            tok = token_RBRACE;
+            break;
         case '~':
-            return token_BITWISE_NOT;
+            tok = token_BITWISE_NOT;
+            break;
+        case '<':
+            tok = switch4(s, token_LSS, token_LEQ, '>', token_SHL, token_SHL_ASSIGN);
+            break;
+        case '>':
+            tok = switch4(s, token_GTR, token_GEQ, '>', token_SHR, token_SHR_ASSIGN);
+            break;
+        case '=':
+            tok = switch2(s, token_ASSIGN, token_EQL);
+            break;
+        case '!':
+            tok = switch2(s, token_NOT, token_NEQ);
+            break;
+        case '&':
+            tok = switch3(s, token_AND, token_AND_ASSIGN, '&', token_LAND);
+            break;
+        case '|':
+            tok = switch3(s, token_OR, token_OR_ASSIGN, '|', token_LOR);
+            break;
         default:
             PANIC("shit is illegal yo: `%c'\n", ch);
         }
