@@ -4,6 +4,7 @@
 
 typedef struct {
     void *fp;
+    int indent;
 } crawler_t;
 
 extern void crawl_file(crawler_t *c, const file_t *f);

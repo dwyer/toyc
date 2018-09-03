@@ -3,7 +3,6 @@ kcfile=$1
 cfile="${kcfile}.c"
 binfile="${kcfile%.kc}"
 ./main ${kcfile} >${cfile}
-cat ${cfile} | clang-format - >&2
-echo
+cat ${cfile} >&2
 cc -w -o ${binfile} ${cfile}
 rm -f ${cfile}
