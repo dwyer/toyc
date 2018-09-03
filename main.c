@@ -39,7 +39,8 @@ int main(int argc, char *argv[])
     fclose(fp);
 
     file_t *f = parse_file(filename, src, src_len);
-    crawl_file(f);
+    crawler_t crawler = {.fp = stdout};
+    crawl_file(&crawler, f);
 
     free(src);
 
