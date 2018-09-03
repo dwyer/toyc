@@ -1,8 +1,7 @@
 #!/bin/sh -e
-kcfile=$1
-cfile="${kcfile}.c"
-binfile="${kcfile%.kc}"
-./main ${kcfile} >${cfile}
-cat ${cfile} >&2
-cc -w -o ${binfile} ${cfile}
-rm -f ${cfile}
+if [ $# -ne 2 ]; then
+    echo usage: $(basename $0) INFILE OUTFILE
+fi
+kcfile="$1"
+binfile="$2"
+./main ${kcfile} | cc -w -x c -o ${binfile} -

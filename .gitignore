@@ -1,4 +1,4 @@
-main
 *.o
-*.kc.c
+main
 stages/stage_*/invalid
+tmp.test

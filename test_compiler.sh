@@ -1,5 +1,7 @@
 #!/bin/bash
 
+tmpdir='./tmp.test'
+
 padding_dots=$(printf '%0.1s' "."{1..60})
 padlength=50
 
@@ -32,13 +34,17 @@ for i in `seq 1 $num_stages`; do
     echo "STAGE $i"
     echo "===================Valid Programs==================="
     for prog in `ls stages/stage_$i/valid/{,**/}*.kc 2>/dev/null`; do
-        gcc -w ${prog%.kc}.c
-        expected_out=`./a.out`
+        outdir="${tmpdir}/$(dirname ${prog})"
+        cout="${tmpdir}/${prog%.kc}.c.out"
+        if [ ! -e ${cout} ]; then
+            mkdir -p ${outdir}
+            gcc -w -o ${cout} ${prog%.kc}.c
+        fi
+        expected_out=`${cout}`
         expected_exit_code=$?
-        rm a.out
 
-        $cmp $prog >/dev/null
-        base="${prog%.*}" #name of executable (filename w/out extension)
+        base="${tmpdir}/${prog%.*}" #name of executable (filename w/out extension)
+        $cmp $prog $base >/dev/null
         actual_out=`./$base`
         actual_exit_code=$?
         test_name="${base##*valid/}"
@@ -66,7 +72,7 @@ for i in `seq 1 $num_stages`; do
                 test_success
             fi
         fi
-        rm $base      
+        rm $base
     done
     # echo "===================Invalid Programs================="
     # for prog in `ls stage_$i/invalid/{,**/}*.c 2>/dev/null`; do
