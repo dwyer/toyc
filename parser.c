@@ -167,7 +167,7 @@ static node_t *parse_unary_expr(parser_t *p)
                 .expr.unary.op = p->tok,
             };
             next(p);
-            tmp.expr.unary.expr = parse_expr(p);
+            tmp.expr.unary.expr = parse_unary_expr(p);
             return copy(&tmp);
         } while (0);
     default:
@@ -175,48 +175,33 @@ static node_t *parse_unary_expr(parser_t *p)
     }
 }
 
-static node_t *parse_binary_expr(parser_t *p)
+static node_t *parse_binary_expr(parser_t *p, int prec1)
 {
     node_t *x = parse_unary_expr(p);
-    switch (p->tok) {
-    case token_ADD:
-    case token_EQL:
-    case token_GEQ:
-    case token_GTR:
-    case token_LAND:
-    case token_LEQ:
-    case token_LOR:
-    case token_LSS:
-    case token_MUL:
-    case token_NEQ:
-    case token_QUO:
-    case token_REM:
-    case token_SUB:
-        do {
-            int op = p->tok;
-            int pos = expect(p, op);
-            node_t *y = parse_binary_expr(p);
-            node_t tmp = {
-                .t = EXPR_BINARY,
-                .pos = pos,
-                .expr.binary = {
-                    .op = op,
-                    .x = x,
-                    .y = y,
-                },
-            };
-            x = copy(&tmp);
-        } while (0);
-        break;
-    default:
-        break;
+    for (;;) {
+        int op = p->tok;
+        int oprec = token_precedence(op);
+        if (oprec < prec1)
+            return x;
+        int pos = expect(p, op);
+        node_t *y = parse_binary_expr(p, oprec+1);
+        node_t tmp = {
+            .t = EXPR_BINARY,
+            .pos = pos,
+            .expr.binary = {
+                .op = op,
+                .x = x,
+                .y = y,
+            },
+        };
+        x = copy(&tmp);
     }
     return x;
 }
 
 static node_t *parse_expr(parser_t *p)
 {
-    return parse_binary_expr(p);
+    return parse_binary_expr(p, token_lowest_prec+1);
 }
 
 static node_t *parse_return_stmt(parser_t *p)

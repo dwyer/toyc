@@ -60,9 +60,11 @@ extern void crawl_node(crawler_t *c, const node_t *n)
         break;
 
     case EXPR_BINARY:
+        fprintf(c->fp, "(");
         crawl_node(c, n->expr.binary.x);
         fprintf(c->fp, " %s ", token_string(n->expr.binary.op));
         crawl_node(c, n->expr.binary.y);
+        fprintf(c->fp, ")");
         break;
 
     case EXPR_CALL:

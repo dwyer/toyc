@@ -114,8 +114,8 @@ typedef enum {
 
 enum {
     token_lowest_prec = 0,
-    token_unary_prec  = 6,
-    token_highestPrec = 7,
+    token_unary_prec  = 7,
+    token_highestPrec = 8,
 };
 
 extern const char *token_string(token_t tok);

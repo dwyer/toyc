@@ -130,16 +130,17 @@ extern int token_precedence(token_t op)
         return 2;
     case token_EQL:
     case token_NEQ:
+        return 3;
     case token_LSS:
     case token_LEQ:
     case token_GTR:
     case token_GEQ:
-        return 3;
+        return 4;
     case token_ADD:
     case token_SUB:
     case token_OR:
     case token_XOR:
-        return 4;
+        return 5;
     case token_MUL:
     case token_QUO:
     case token_REM:
@@ -147,7 +148,7 @@ extern int token_precedence(token_t op)
     case token_SHR:
     case token_AND:
     case token_AND_NOT:
-        return 5;
+        return 6;
     default:
         return token_lowest_prec;
     }
