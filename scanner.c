@@ -6,19 +6,11 @@ static void next(scanner_t *s)
 {
     if (s->ch == token_EOF)
         return;
-    s->column++;
     s->ch = s->src[s->offset++];
-    if (s->ch == '\n') {
-        s->column = 1;
-        s->line++;
-        /* TODO: insert semicolon */
-    }
 }
 
 extern void scanner_init(scanner_t *s, char *src, int len)
 {
-    s->line = 1;
-    s->column = 1;
     s->ch = -1;
     s->src = src;
     s->src_len = len;

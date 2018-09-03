@@ -11,4 +11,4 @@ cat "${src}"
 echo
 
 echo === LR ===
-clang -S -emit-llvm -o - "${src}"
+clang -S -emit-llvm -O0 -Xclang -disable-llvm-passes -o - "${src}"

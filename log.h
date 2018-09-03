@@ -50,7 +50,7 @@
 
 #define PANIC(fmt, ...) \
     do { \
-        _LOG("Fatal: ", "%s:%d: " fmt, __FILE__, __LINE__, ## __VA_ARGS__); \
+        fprintf(stderr, fmt "\n", ## __VA_ARGS__); \
         void *_buf__##__LINE__[100]; \
         int _n__##__LINE__ = backtrace(_buf__##__LINE__, 100); \
         backtrace_symbols_fd(_buf__##__LINE__, _n__##__LINE__, 2); \

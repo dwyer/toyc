@@ -37,6 +37,7 @@ typedef enum {
 struct _node {
 
     node_type_t t;
+    int pos;
 
     union {
 

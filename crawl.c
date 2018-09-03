@@ -16,6 +16,7 @@ extern void crawl_file(crawler_t *c, const file_t *f)
 extern void crawl_node(crawler_t *c, const node_t *n)
 {
     assert(n);
+
     switch (n->t) {
 
     case NODE_UNDEFINED:

@@ -10,9 +10,6 @@
 
 #include <da.h>
 
-#define P_PANIC(p, fmt, ...) \
-    PANIC("%s:%d:%d: " fmt, (p)->filename, (p)->scanner.line, (p)->scanner.column, ## __VA_ARGS__)
-
 #define memdup(p, size) ({void *vp = malloc((size)); memcpy(vp, (p), (size)); vp;})
 #define copy(p) memdup((p), sizeof(*(p)))
 
@@ -21,6 +18,7 @@ typedef struct {
     scanner_t scanner;
     token_t tok;
     char lit[BUFSIZ];
+    int pos;
 } parser_t;
 
 static node_t *parse_decl(parser_t *p);
@@ -32,6 +30,7 @@ DA_DEF_HELPERS(node, node_t *);
 
 static void next(parser_t *p)
 {
+    p->pos = p->scanner.offset;
     p->tok = scanner_scan(&p->scanner, p->lit);
     LOGV("%d:%d, tok %s", p->scanner.line, p->scanner.column, token_string(p->tok));
 }
@@ -45,16 +44,35 @@ static int accept(parser_t *p, token_t tok)
     return 0;
 }
 
-static void expect(parser_t *p, token_t tok)
+static void error_expected(parser_t *p, int pos, const char *msg)
 {
-    if (accept(p, tok))
-        return;
-    P_PANIC(p, "expected %s, got %s", token_string(tok), token_string(p->tok));
+    int line = 1;
+    int column = 1;
+    for (int i = 0; i < pos-1; ++i) {
+        if (p->scanner.src[i] == '\n') {
+            line++;
+            column = 1;
+        } else {
+            column++;
+        }
+    }
+    PANIC("%s:%d:%d: expected %s, got %s", p->filename, line, column, msg,
+            token_string(p->tok));
+}
+
+static int expect(parser_t *p, token_t tok)
+{
+    int pos = p->pos;
+    if (p->tok != tok) {
+        error_expected(p, pos, token_string(tok));
+    }
+    next(p);
+    return pos;
 }
 
 static node_t *parse_ident(parser_t *p)
 {
-    node_t tmp = {.t = EXPR_IDENT};
+    node_t tmp = {.t = EXPR_IDENT, .pos = p->pos};
     if (p->tok == token_IDENT) {
         tmp.expr.ident.name = strdup(p->lit);
         next(p);
@@ -74,6 +92,7 @@ static node_t *parse_operand(parser_t *p)
         do {
             node_t tmp = {
                 .t = EXPR_BASIC,
+                .pos = p->pos,
                 .expr.basic = {
                     .kind = p->tok,
                     .value = strdup(p->lit),
@@ -84,18 +103,19 @@ static node_t *parse_operand(parser_t *p)
         } while (0);
     case token_LPAREN:
         do {
-            next(p);
+            int pos = expect(p, token_LPAREN);
             node_t *x = parse_expr(p);
             expect(p, token_RPAREN);
             node_t tmp = {
                 .t = EXPR_PAREN,
+                .pos = pos,
                 .expr.paren.x = x,
             };
             return copy(&tmp);
         } while (0);
         break;
     default:
-        P_PANIC(p, "expected expr, got `%s`", token_string(p->tok));
+        error_expected(p, p->pos, "expression");
         break;
     }
     return NULL;
@@ -103,7 +123,7 @@ static node_t *parse_operand(parser_t *p)
 
 static node_t *parse_call(parser_t *p, node_t *func)
 {
-    expect(p, token_LPAREN);
+    int pos = expect(p, token_LPAREN);
     da_t args;
     da_init_node(&args);
     while (p->tok != token_RPAREN) {
@@ -116,6 +136,7 @@ static node_t *parse_call(parser_t *p, node_t *func)
     expect(p, token_RPAREN);
     node_t tmp = {
         .t = EXPR_CALL,
+        .pos = pos,
         .expr.call = {
             .func = func,
             .args = args.data,
@@ -142,6 +163,7 @@ static node_t *parse_unary_expr(parser_t *p)
         do {
             node_t tmp = {
                 .t = EXPR_UNARY,
+                .pos = p->pos,
                 .expr.unary.op = p->tok,
             };
             next(p);
@@ -172,10 +194,11 @@ static node_t *parse_binary_expr(parser_t *p)
     case token_SUB:
         do {
             int op = p->tok;
-            expect(p, op);
+            int pos = expect(p, op);
             node_t *y = parse_binary_expr(p);
             node_t tmp = {
                 .t = EXPR_BINARY,
+                .pos = pos,
                 .expr.binary = {
                     .op = op,
                     .x = x,
@@ -198,9 +221,10 @@ static node_t *parse_expr(parser_t *p)
 
 static node_t *parse_return_stmt(parser_t *p)
 {
-    expect(p, token_RETURN);
+    int pos = expect(p, token_RETURN);
     node_t tmp = {
         .t = STMT_RETURN,
+        .pos = pos,
         .stmt.return_.expr = p->tok == token_SEMICOLON ? NULL : parse_expr(p),
     };
     expect(p, token_SEMICOLON);
@@ -214,6 +238,7 @@ static node_t *parse_simple_stmt(parser_t *p)
         node_t *rhs = parse_expr(p);
         node_t tmp = {
             .t = STMT_ASSIGN,
+            .pos = lhs->pos,
             .stmt.assign = {
                 .lhs = lhs,
                 .tok = token_ASSIGN,
@@ -224,6 +249,7 @@ static node_t *parse_simple_stmt(parser_t *p)
     }
     node_t tmp = {
         .t = STMT_EXPR,
+        .pos = lhs->pos,
         .stmt.expr = {
             .x = lhs,
         },
@@ -233,7 +259,7 @@ static node_t *parse_simple_stmt(parser_t *p)
 
 static node_t *parse_block_stmt(parser_t *p)
 {
-    expect(p, token_LBRACE);
+    int pos = expect(p, token_LBRACE);
     da_t stmts;
     da_init_node(&stmts);
     while (p->tok != token_RBRACE) {
@@ -243,6 +269,7 @@ static node_t *parse_block_stmt(parser_t *p)
     expect(p, token_RBRACE);
     node_t tmp = {
         .t=STMT_BLOCK,
+        .pos = pos,
         .stmt.block.stmts = stmts.data,
     };
     return copy(&tmp);
@@ -250,7 +277,7 @@ static node_t *parse_block_stmt(parser_t *p)
 
 static node_t *parse_if_stmt(parser_t *p)
 {
-    expect(p, token_IF);
+    int pos = expect(p, token_IF);
     node_t *cond = parse_expr(p);
     node_t *body = parse_block_stmt(p);
     node_t *else_ = NULL;
@@ -263,6 +290,7 @@ static node_t *parse_if_stmt(parser_t *p)
     }
     node_t tmp = {
         .t = STMT_IF,
+        .pos = pos,
         .stmt.if_ = {
             .cond = cond,
             .body = body,
@@ -272,20 +300,21 @@ static node_t *parse_if_stmt(parser_t *p)
     return copy(&tmp);
 }
 
-static node_t *parse_branch_stmt(parser_t *p)
+static node_t *parse_branch_stmt(parser_t *p, token_t tok)
 {
+    int pos = expect(p, tok);
     node_t tmp = {
         .t = STMT_BRANCH,
-        .stmt.branch.tok = p->tok,
+        .pos = pos,
+        .stmt.branch.tok = tok,
     };
-    next(p);
     expect(p, token_SEMICOLON);
     return copy(&tmp);
 }
 
 static node_t *parse_for_stmt(parser_t *p)
 {
-    expect(p, token_FOR);
+    int pos = expect(p, token_FOR);
     node_t *init = NULL;
     if (p->tok != token_SEMICOLON)
         init = parse_stmt(p);
@@ -301,6 +330,7 @@ static node_t *parse_for_stmt(parser_t *p)
     node_t *body = parse_block_stmt(p);
     node_t tmp = {
         .t = STMT_FOR,
+        .pos = pos,
         .stmt.for_ = {
             .init = init,
             .cond = cond,
@@ -317,9 +347,11 @@ static node_t *parse_stmt(parser_t *p)
     case token_VAR:
     case token_TYPE:
         do {
+            node_t *decl = parse_decl(p);
             node_t tmp = {
                 .t = STMT_DECL,
-                .stmt.decl.decl = parse_decl(p),
+                .pos = decl->pos,
+                .stmt.decl.decl = decl,
             };
             return copy(&tmp);
         } while (0);
@@ -333,7 +365,7 @@ static node_t *parse_stmt(parser_t *p)
         return parse_return_stmt(p);
     case token_BREAK:
     case token_CONTINUE:
-        return parse_branch_stmt(p);
+        return parse_branch_stmt(p, p->tok);
     case token_LBRACE:
         return parse_block_stmt(p);
     case token_IF:
@@ -342,12 +374,12 @@ static node_t *parse_stmt(parser_t *p)
         return parse_for_stmt(p);
     case token_SEMICOLON:
         do {
-            node_t tmp = { .t = STMT_EMPTY, };
+            node_t tmp = { .t = STMT_EMPTY, .pos = p->pos, };
             next(p);
             return copy(&tmp);
         } while (0);
     default:
-        P_PANIC(p, "expected statement: got %s", p->lit);
+        error_expected(p, p->pos, "statement");
         return NULL;
     }
 }
@@ -359,6 +391,7 @@ static node_t **parse_parameter_list(parser_t *p)
     for (;;) {
         node_t tmp = {
             .t = EXPR_FIELD,
+            .pos = p->pos,
             .expr.field = {
                 .name = parse_ident(p),
                 .type = parse_type_expr(p),
@@ -385,7 +418,7 @@ static node_t **parse_params(parser_t *p)
 
 static node_t *parse_func_decl(parser_t *p)
 {
-    expect(p, token_FUNC);
+    int pos = expect(p, token_FUNC);
     node_t *recv = NULL;
     node_t *ident = parse_ident(p);
     if (accept(p, token_PERIOD)) {
@@ -401,6 +434,7 @@ static node_t *parse_func_decl(parser_t *p)
         expect(p, token_SEMICOLON);
     node_t tmp = {
         .t = DECL_FUNC,
+        .pos = pos,
         .decl.func = {
             .recv = recv,
             .name = ident,
@@ -414,7 +448,7 @@ static node_t *parse_func_decl(parser_t *p)
 
 static node_t *parse_struct_type(parser_t *p)
 {
-    expect(p, token_STRUCT);
+    int pos = expect(p, token_STRUCT);
     expect(p, token_LBRACE);
     da_t fields;
     da_init_node(&fields);
@@ -425,6 +459,7 @@ static node_t *parse_struct_type(parser_t *p)
     expect(p, token_RBRACE);
     node_t tmp = {
         .t = EXPR_STRUCT,
+        .pos = pos,
         .expr.struct_.fields = da_get(&fields, 0),
     };
     return copy(&tmp);
@@ -438,16 +473,17 @@ static node_t *parse_type_expr(parser_t *p)
     case token_STRUCT:
         return parse_struct_type(p);
     default:
-        P_PANIC(p, "invalid token for parse_type_expr: %d", p->tok);
+        error_expected(p, p->pos, "type expression");
         return NULL;
     }
 }
 
 static node_t *parse_type_decl(parser_t *p)
 {
-    expect(p, token_TYPE);
+    int pos = expect(p, token_TYPE);
     node_t tmp = {
         .t = DECL_TYPE,
+        .pos = pos,
         .decl.type = {
             .name = parse_ident(p),
             .type = parse_type_expr(p),
@@ -459,9 +495,10 @@ static node_t *parse_type_decl(parser_t *p)
 
 static node_t *parse_var_decl(parser_t *p)
 {
-    expect(p, token_VAR);
+    int pos = expect(p, token_VAR);
     node_t tmp = {
         .t = DECL_VAR,
+        .pos = pos,
         .decl.var = {
             .name = parse_ident(p),
             .type = parse_ident(p),
@@ -481,11 +518,9 @@ static node_t *parse_decl(parser_t *p)
         return parse_type_decl(p);
     case token_VAR:
         return parse_var_decl(p);
-    case token_EOF:
-        return NULL;
     default:
-        P_PANIC(p, "unexpected token: %s", token_string(p->tok));
-        break;
+        error_expected(p, p->pos, "declaration");
+        return NULL;
     }
 }
 

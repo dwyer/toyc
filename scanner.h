@@ -8,8 +8,6 @@ typedef struct {
     int src_len;
     int offset;
     int ch;
-    int line;
-    int column;
 } scanner_t;
 
 extern void scanner_init(scanner_t *s, char *src, int len);
