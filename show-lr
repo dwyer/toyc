@@ -1,0 +1,14 @@
+#!/bin/sh
+if [ $# -ne 1 ]; then
+    exit 1
+fi
+src="${1}"
+
+echo $src
+
+echo === C ===
+cat "${src}"
+echo
+
+echo === LR ===
+clang -S -emit-llvm -o - "${src}"
