@@ -2,8 +2,7 @@
 #include <stdio.h> // FILE, fopen, etc.
 #include <string.h> // strcmp
 
-#include "crawl.h"
-#include "emit_obfc.h"
+#include "emit.h"
 #include "parser.h"
 
 static enum emitter {
