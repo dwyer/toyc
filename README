@@ -1,7 +1,8 @@
 A toy compiler for a toy language.
 
 === Dependencies ==
-* https://github.com/dwyer/da
+* clang (untested with gcc).
+* da <https://github.com/dwyer/da>
 
 === LICENSE ===
 
