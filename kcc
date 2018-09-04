@@ -1,6 +1,7 @@
 #!/bin/sh -e
 if [ $# -ne 2 ]; then
     echo usage: $(basename $0) INFILE OUTFILE
+    exit 1
 fi
 kcfile="$1"
 binfile="$2"
