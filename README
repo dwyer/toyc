@@ -1,5 +1,10 @@
 A toy compiler for a toy language.
 
+=== Dependencies ==
+* https://github.com/dwyer/da
+
+=== LICENSE ===
+
 Some of the code was ported from the Go language [1], so I've included their
 license.
 
