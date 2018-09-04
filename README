@@ -1,0 +1,11 @@
+A toy compiler for a toy language.
+
+Some of the code was ported from the Go language [1], so I've included their
+license.
+
+Unit tests are borrowed from Nora Sandler's "Write a Compiler" series [2][3]
+so her LICENSE is included as well (under stages/).
+
+[1] Go code: https://golang.org/src/go
+[2] Nora's blog: https://norasandler.com/2017/11/29/Write-a-Compiler.html
+[3] Nora's code: https://github.com/nlsandler/write_a_c_compiler

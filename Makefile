@@ -1,9 +1,6 @@
 CFLAGS+=-Wall
-
 CFLAGS+=-DLOG_LEVEL=2
-
-CFLAGS+=-I../repo/mono/lib/da
-LDFLAGS+=-L../repo/mono/lib/da -lda
+LDFLAGS+=-lda
 
 main: main.o crawl.o emit_obfc.o parser.o scanner.o token.o
 
