@@ -5,8 +5,9 @@ CFLAGS+=-DLOG_LEVEL=2
 CFLAGS+=-I../repo/mono/lib/da
 LDFLAGS+=-L../repo/mono/lib/da -lda
 
-main: main.o crawl.o parser.o scanner.o token.o
+main: main.o crawl.o emit_obfc.o parser.o scanner.o token.o
 
+emit_obfc.o: ast.h crawl.h emit_obfc.h token.h
 crawl.o: ast.h crawl.h token.h
 main.o: ast.h crawl.h parser.h token.h
 scanner.o: scanner.h token.h

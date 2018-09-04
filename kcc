@@ -4,4 +4,11 @@ if [ $# -ne 2 ]; then
 fi
 kcfile="$1"
 binfile="$2"
-./main ${kcfile} | cc -w -x c -o ${binfile} -
+
+flags="--emit-obfc"
+
+# cat ${kcfile} >&2
+# echo ' =========== ' >&2
+# ./main ${flags} ${kcfile} >&2
+# echo ' =========== ' >&2
+./main ${flags} ${kcfile} | cc -w -x c -o ${binfile} -

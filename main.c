@@ -1,8 +1,15 @@
 #include <stdlib.h> // malloc
 #include <stdio.h> // FILE, fopen, etc.
+#include <string.h> // strcmp
 
 #include "crawl.h"
+#include "emit_obfc.h"
 #include "parser.h"
+
+static enum emitter {
+    EMIT_C,
+    EMIT_OBFC,
+} emitter = EMIT_C;
 
 int freadall(FILE *fp, char **sp)
 {
@@ -26,23 +33,42 @@ int freadall(FILE *fp, char **sp)
 
 int main(int argc, char *argv[])
 {
-    if (argc < 2)
-        return 1;
+    const char *progname = *argv;
+    (void)progname;
 
-    const char *filename = argv[1];
-    FILE *fp = fopen(filename, "r");
-    if (!fp)
-        return 2;
+    while (*++argv) {
+        if (!strcmp(*argv, "--emit-c")) {
+            emitter = EMIT_C;
+        } else if (!strcmp(*argv, "--emit-obfc")) {
+            emitter = EMIT_OBFC;
+        } else {
+            if (argc < 1)
+                return 1;
 
-    char *src = NULL;
-    int src_len = freadall(fp, &src);
-    fclose(fp);
+            const char *filename = *argv;
+            FILE *fp = fopen(filename, "r");
+            if (!fp)
+                return 2;
 
-    file_t *f = parse_file(filename, src, src_len);
-    crawler_t crawler = {.fp = stdout};
-    crawl_file(&crawler, f);
+            char *src = NULL;
+            int src_len = freadall(fp, &src);
+            fclose(fp);
 
-    free(src);
+            file_t *f = parse_file(filename, src, src_len);
+            crawler_t crawler = {.fp = stdout};
+
+            switch (emitter) {
+            case EMIT_C:
+                crawl_file(&crawler, f);
+                break;
+            case EMIT_OBFC:
+                emit_obfc(&crawler, f);
+                break;
+            }
+
+            free(src);
+        }
+    }
 
     return 0;
 }
