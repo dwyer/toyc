@@ -13,14 +13,16 @@ extern void crawl_file(crawler_t *c, const file_t *f)
     }
 }
 
-static void indent(crawler_t *c)
+extern void emit_tabs(crawler_t *c, int n)
 {
-    for (int i = 0; i < c->indent; ++i)
+    for (int i = 0; i < n; ++i)
         fputc('\t', c->fp);
 }
 
 extern void crawl_node(crawler_t *c, const node_t *n)
 {
+    static int indent = 0;
+
     assert(n);
 
     switch (n->t) {
@@ -123,14 +125,14 @@ extern void crawl_node(crawler_t *c, const node_t *n)
 
     case STMT_BLOCK:
         fprintf(c->fp, "{\n");
-        ++c->indent;
+        ++indent;
         for (node_t **stmts = n->stmt.block.stmts; stmts && *stmts; ++stmts) {
-            indent(c);
+            emit_tabs(c, indent);
             crawl_node(c, *stmts);
             fprintf(c->fp, ";\n");
         }
-        --c->indent;
-        indent(c);
+        --indent;
+        emit_tabs(c, indent);
         fprintf(c->fp, "}");
         break;
 
