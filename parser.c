@@ -8,7 +8,8 @@
 #include <stdio.h> // BUFSIZ
 #include <string.h> // memcpy
 
-#include <da.h>
+#include <da/da.h>
+#include <da/da_util.h>
 
 #define memdup(p, size) ({void *vp = malloc((size)); memcpy(vp, (p), (size)); vp;})
 #define copy(p) memdup((p), sizeof(*(p)))
