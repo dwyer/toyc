@@ -2,8 +2,9 @@ CFLAGS+=-Wall
 CFLAGS+=-DLOG_LEVEL=2
 LDFLAGS+=-lda
 
-main: main.o emit_c.o emit_obfc.o parser.o scanner.o token.o
+main: ast.o emit_c.o emit_obfc.o main.o parser.o scanner.o token.o
 
+ast.o: ast.h token.h
 emit_obfc.o: ast.h emit.h token.h
 emit_c.o: ast.h emit.h token.h
 main.o: ast.h emit.h parser.h token.h

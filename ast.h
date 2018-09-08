@@ -3,6 +3,12 @@
 
 #include "token.h"
 
+#include <stdlib.h> // malloc
+#include <string.h> // memcpy
+
+#define memdup(p, size) ({void *vp = malloc((size)); memcpy(vp, (p), (size)); vp;})
+#define copy(p) memdup((p), sizeof(*(p)))
+
 typedef struct _node node_t;
 
 typedef struct _file file_t;
@@ -137,6 +143,10 @@ struct _node {
             } func;
 
             struct {
+                node_t *spec;
+            } gen;
+
+            struct {
                 node_t *name;
                 node_t *type;
             } type;
@@ -154,5 +164,11 @@ struct _node {
 struct _file {
     node_t **decls;
 };
+
+typedef struct _scope {
+    struct _scope *outer;
+} scope_t;
+
+extern scope_t *ast_new_scope(scope_t *outer);
 
 #endif

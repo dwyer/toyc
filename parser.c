@@ -4,15 +4,11 @@
 #include "scanner.h"
 #include "token.h"
 
-#include <stdlib.h> // alloc
 #include <stdio.h> // BUFSIZ
-#include <string.h> // memcpy
 
 #include <da/da.h>
 #include <da/da_util.h>
 
-#define memdup(p, size) ({void *vp = malloc((size)); memcpy(vp, (p), (size)); vp;})
-#define copy(p) memdup((p), sizeof(*(p)))
 
 typedef struct {
     const char *filename;
@@ -20,8 +16,10 @@ typedef struct {
     token_t tok;
     char lit[BUFSIZ];
     int pos;
+    scope_t *top_scope;
 } parser_t;
 
+static void next(parser_t *p);
 static node_t *parse_decl(parser_t *p);
 static node_t *parse_expr(parser_t *p);
 static node_t *parse_stmt(parser_t *p);
@@ -33,7 +31,19 @@ DA_DEF_HELPERS(node, node_t *);
 static void init(parser_t *p, const char *filename, char *src, int src_len)
 {
     p->filename = filename;
+    p->top_scope = NULL;
     scanner_init(&p->scanner, src, src_len);
+    next(p);
+}
+
+static void open_scope(parser_t *p)
+{
+    p->top_scope = ast_new_scope(p->top_scope);
+}
+
+static void close_scope(parser_t *p)
+{
+    p->top_scope = p->top_scope->outer;
 }
 
 static void next(parser_t *p)
@@ -521,11 +531,12 @@ static file_t *_parse_file(parser_t *p)
 {
     da_t decls;
     da_init_node(&decls);
-    next(p);
+    open_scope(p);
     while (p->tok != token_EOF) {
         da_append_node(&decls, parse_decl(p));
     }
     da_append_node(&decls, NULL);
+    close_scope(p);
     file_t file = {.decls = decls.data};
     return copy(&file);
 }
