@@ -3,6 +3,9 @@
 
 #include "token.h"
 
+#include <da/da.h>
+#include <da/da_str.h>
+
 #include <stdlib.h> // malloc
 #include <string.h> // memcpy
 
@@ -167,6 +170,7 @@ struct _file {
 
 typedef struct _scope {
     struct _scope *outer;
+    da_t list;
 } scope_t;
 
 extern scope_t *ast_new_scope(scope_t *outer);

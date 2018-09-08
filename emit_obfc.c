@@ -5,31 +5,52 @@
 #include <assert.h>
 #include <stdio.h>
 
-static const char *r0 = "$r0";
-static const char *r1 = "$r1";
-static const char *st = "$st";
-static const char *sp = "$sp";
+static const char *r0 = "$eax";
+static const char *r1 = "$ebx";
+static const char *esp = "$esp";
+static const char *ebp = "$ebp";
+static const char *st = "$mem";
 static const int stack_size = 8 * 1024 * 1024 / sizeof(int);
 
-static void print_ident(crawler_t *c, node_t *id)
+static int lookup(scope_t *s, const char *ident)
 {
-    fprintf(c->fp, "%s", id->expr.ident.name);
+    int idx = 1;
+    while (s) {
+        for (int i = 1; i <= da_len(&s->list); ++i, ++idx) {
+            if (!strcmp(da_get_s(&s->list, -i), ident))
+                return idx;
+        }
+        s = s->outer;
+    }
+    return 0;
 }
 
-static void push(crawler_t *c, const char *lit)
+static char *ident_string(node_t *n)
 {
-    fprintf(c->fp, "%s[%s] = %s; %s += 1;\n", st, sp, lit, sp);
+    return n->expr.ident.name;
 }
 
-static void pop(crawler_t *c, const char *lit)
+static void print_ident(crawler_t *c, node_t *n)
 {
-    fprintf(c->fp, "%s = %s[%s -= 1];\n", lit, st, sp);
+    fprintf(c->fp, "%s", n->expr.ident.name);
+}
+
+static void push(crawler_t *c, scope_t *s, char *var, const char *val)
+{
+    fprintf(c->fp, "\t%s[%s++] = %s;\n", st, esp, val);
+    da_append_s(&s->list, var = var ? var : "");
+}
+
+static void pop(crawler_t *c, scope_t *s, const char *val)
+{
+    fprintf(c->fp, "\t%s = %s[--%s];\n", val, st, esp);
+    free(da_pop_s(&s->list));
 }
 
 static void emit(crawler_t *c, const node_t *n)
 {
-    static int indent = 0;
     static const node_t *loop_node = NULL;
+    static scope_t *top_scope = NULL;
 
     assert(n);
 
@@ -40,6 +61,11 @@ static void emit(crawler_t *c, const node_t *n)
         break;
 
     case DECL_FUNC:
+        top_scope = ast_new_scope(top_scope);
+        for (node_t **params = n->decl.func.params; params && *params; ++params) {
+            node_t *param = *params;
+            da_append_s(&top_scope->list, ident_string(param->expr.field.name));
+        }
         print_ident(c, n->decl.func.type);
         fprintf(c->fp, " ");
         print_ident(c, n->decl.func.name);
@@ -50,12 +76,22 @@ static void emit(crawler_t *c, const node_t *n)
                 fprintf(c->fp, ",");
         }
         fprintf(c->fp, ") ");
-        if (n->decl.func.body)
+        if (n->decl.func.body) {
+            fprintf(c->fp, " {\n");
+            push(c, top_scope, NULL, ebp);
+            fprintf(c->fp, "\t%s = %s;\n", ebp, esp);
             emit(c, n->decl.func.body);
+            fprintf(c->fp, "\t%s = 0;\n", r0); /* return 0 if no return stmt */
+            fprintf(c->fp, "$ret:\n");
+            fprintf(c->fp, "\t%s = %s;\n", esp, ebp);
+            pop(c, top_scope, ebp);
+            fprintf(c->fp, "\treturn %s;\n", r0);
+            fprintf(c->fp, "}");
+        }
+        top_scope = top_scope->outer;
         break;
 
     case DECL_TYPE:
-        emit_tabs(c, indent);
         fprintf(c->fp, "typedef ");
         emit(c, n->decl.type.type);
         fprintf(c->fp, " ");
@@ -63,33 +99,21 @@ static void emit(crawler_t *c, const node_t *n)
         break;
 
     case DECL_VAR:
-        emit_tabs(c, indent);
-        print_ident(c, n->decl.var.type);
-        fprintf(c->fp, " ");
-        print_ident(c, n->decl.var.name);
-        fprintf(c->fp, ";\n");
-        if (n->decl.var.value) {
+        if (n->decl.var.value)
             emit(c, n->decl.var.value);
-            emit_tabs(c, indent);
-            print_ident(c, n->decl.var.name);
-            fprintf(c->fp, " = %s;\n", r0);
-        }
+        push(c, top_scope, ident_string(n->decl.var.name), r0);
         break;
 
     case EXPR_BASIC:
-        emit_tabs(c, indent);
-        fprintf(c->fp, "%s = %s;\n", r0, n->expr.basic.value);
+        fprintf(c->fp, "\t%s = %s;\n", r0, n->expr.basic.value);
         break;
 
     case EXPR_BINARY:
         emit(c, n->expr.binary.x);
-        emit_tabs(c, indent);
-        push(c, r0);
+        push(c, top_scope, NULL, r0);
         emit(c, n->expr.binary.y);
-        emit_tabs(c, indent);
-        pop(c, r1);
-        emit_tabs(c, indent);
-        fprintf(c->fp, "%s = %s %s %s;\n", r0, r1, token_string(n->expr.unary.op), r0);
+        pop(c, top_scope, r1);
+        fprintf(c->fp, "\t%s = %s %s %s;\n", r0, r1, token_string(n->expr.unary.op), r0);
         break;
 
     case EXPR_CALL:
@@ -97,21 +121,18 @@ static void emit(crawler_t *c, const node_t *n)
             int num_args = 0;
             for (node_t **args = n->expr.call.args; args && *args; ++args, ++num_args) {
                 emit(c, *args);
-                emit_tabs(c, indent);
-                push(c, r0);
+                push(c, top_scope, NULL, r0);
             }
-            emit_tabs(c, indent);
-            print_ident(c, n->expr.call.func);
-            fprintf(c->fp, "(");
+            fprintf(c->fp, "\t%s(", ident_string(n->expr.call.func));
             for (int i = 0; i < num_args; ++i) {
                 if (i)
                     fprintf(c->fp, ",");
-                fprintf(c->fp, "%s[%s-%d]", st, sp, num_args-i);
+                fprintf(c->fp, "%s[%s-%d]", st, esp, num_args-i);
             }
-            fprintf(c->fp, ")");
-            fprintf(c->fp, ";\n");
-            emit_tabs(c, indent);
-            fprintf(c->fp, "%s -= %d;\n", sp, num_args);
+            fprintf(c->fp, ");\n");
+            fprintf(c->fp, "\t%s -= %d;\n", esp, num_args);
+            for (int i = 0; i < num_args; ++i)
+                free(da_pop_s(&top_scope->list));
         } while (0);
         break;
 
@@ -122,8 +143,8 @@ static void emit(crawler_t *c, const node_t *n)
         break;
 
     case EXPR_IDENT:
-        emit_tabs(c, indent);
-        fprintf(c->fp, "%s = %s;\n", r0, n->expr.ident.name);
+        fprintf(c->fp, "\t%s = %s[%s-%d];\n", r0, st, esp,
+                lookup(top_scope, n->expr.ident.name));
         break;
 
     case EXPR_PAREN:
@@ -142,36 +163,32 @@ static void emit(crawler_t *c, const node_t *n)
 
     case EXPR_UNARY:
         emit(c, n->expr.unary.expr);
-        emit_tabs(c, indent);
-        fprintf(c->fp, "%s = %s %s;\n", r0, token_string(n->expr.unary.op), r0);
+        fprintf(c->fp, "\t%s = %s %s;\n", r0, token_string(n->expr.unary.op), r0);
         break;
 
     case STMT_ASSIGN:
         emit(c, n->stmt.assign.rhs);
-        emit_tabs(c, indent);
-        print_ident(c, n->stmt.assign.lhs);
-        fprintf(c->fp, " = %s;\n", r0);
+        fprintf(c->fp, "\t%s[%s-%d] = %s;\n", st, esp,
+                lookup(top_scope, ident_string(n->stmt.assign.lhs)),
+                r0);
         break;
 
     case STMT_BLOCK:
-        emit_tabs(c, indent);
-        fprintf(c->fp, "{\n");
-        ++indent;
+        top_scope = ast_new_scope(top_scope);
         for (node_t **stmts = n->stmt.block.stmts; stmts && *stmts; ++stmts)
             emit(c, *stmts);
-        --indent;
-        emit_tabs(c, indent);
-        fprintf(c->fp, "}\n");
+        fprintf(c->fp, "\t%s -= %d;\n", esp, da_len(&top_scope->list));
+        da_deinit(&top_scope->list);
+        top_scope = top_scope->outer;
         break;
 
     case STMT_BRANCH:
-        emit_tabs(c, indent);
         switch (n->stmt.branch.tok) {
         case token_BREAK:
-            fprintf(c->fp, "goto $loop_END_%p;\n", loop_node);
+            fprintf(c->fp, "\tgoto $loop_END_%p;\n", loop_node);
             break;
         case token_CONTINUE:
-            fprintf(c->fp, "goto $loop_POST_%p;\n", loop_node);
+            fprintf(c->fp, "\tgoto $loop_POST_%p;\n", loop_node);
             break;
         default:
             break;
@@ -190,16 +207,13 @@ static void emit(crawler_t *c, const node_t *n)
         break;
 
     case STMT_FOR:
-        emit_tabs(c, indent);
-        fprintf(c->fp, "do {\n");
-        ++indent;
+        top_scope = ast_new_scope(top_scope);
         if (n->stmt.for_.init)
             emit(c, n->stmt.for_.init);
         fprintf(c->fp, "$loop_START_%p:\n", n);
         if (n->stmt.for_.cond) {
             emit(c, n->stmt.for_.cond);
-            emit_tabs(c, indent);
-            fprintf(c->fp, "if (!%s) goto $loop_END_%p;\n", r0, n);
+            fprintf(c->fp, "\tif (!%s) goto $loop_END_%p;\n", r0, n);
         }
         for (const node_t *tmp = loop_node;;) {
             loop_node = n;
@@ -211,22 +225,19 @@ static void emit(crawler_t *c, const node_t *n)
         if (n->stmt.for_.post)
             emit(c, n->stmt.for_.post);
         fprintf(c->fp, "goto $loop_START_%p;\n", n);
-        fprintf(c->fp, "$loop_END_%p: /* NOOP */;\n", n);
-        --indent;
-        emit_tabs(c, indent);
-        fprintf(c->fp, "} while (0);");
+        fprintf(c->fp, "$loop_END_%p:\n", n);
+        fprintf(c->fp, "\t%s -= %d;\n", esp, da_len(&top_scope->list));
+        da_deinit(&top_scope->list);
+        top_scope = top_scope->outer;
         break;
 
     case STMT_IF:
         emit(c, n->stmt.if_.cond);
-        emit_tabs(c, indent);
-        fprintf(c->fp, "if (%s) goto $if_true_%p;\n", r0, n);
-        emit_tabs(c, indent);
-        fprintf(c->fp, "goto $if_else_%p;\n", n);
+        fprintf(c->fp, "\tif (%s) goto $if_true_%p;\n", r0, n);
+        fprintf(c->fp, "\tgoto $if_else_%p;\n", n);
         fprintf(c->fp, "$if_true_%p:\n", n);
         emit(c, n->stmt.if_.body);
-        emit_tabs(c, indent);
-        fprintf(c->fp, "goto $if_end_%p;\n", n);
+        fprintf(c->fp, "\tgoto $if_end_%p;\n", n);
         fprintf(c->fp, "$if_else_%p:\n", n);
         if (n->stmt.if_.else_)
             emit(c, n->stmt.if_.else_);
@@ -234,13 +245,9 @@ static void emit(crawler_t *c, const node_t *n)
         break;
 
     case STMT_RETURN:
-        emit(c, n->stmt.return_.expr);
-        emit_tabs(c, indent);
-        fprintf(c->fp, "return");
-        if (n->stmt.return_.expr) {
-            fprintf(c->fp, " %s", r0);
-        }
-        fprintf(c->fp, ";\n");
+        if (n->stmt.return_.expr)
+            emit(c, n->stmt.return_.expr);
+        fprintf(c->fp, "\tgoto $ret;\n");
         break;
 
         /* XXX: no default clause, we want warnings for unhandled ndoe types */
@@ -249,10 +256,8 @@ static void emit(crawler_t *c, const node_t *n)
 
 extern void emit_obfc(crawler_t *c, const file_t *f)
 {
-    fprintf(c->fp, "static int %s;\n", r0);
-    fprintf(c->fp, "static int %s;\n", r1);
+    fprintf(c->fp, "static int %s, %s, %s, %s;\n", r0, r1, esp, ebp);
     fprintf(c->fp, "static int %s[%d];\n", st, stack_size);
-    fprintf(c->fp, "static int %s;\n", sp);
     for (node_t **decls = f->decls; decls && *decls; ++decls) {
         switch ((*decls)->t) {
         case DECL_FUNC:
