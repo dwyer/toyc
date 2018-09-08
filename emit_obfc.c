@@ -7,10 +7,9 @@
 
 static const char *r0 = "$r0";
 static const char *r1 = "$r1";
-static const char *st = "$s";
-
-static int stack[256] = {};
-static int stack_idx = 0;
+static const char *st = "$st";
+static const char *sp = "$sp";
+static const int stack_size = 8 * 1024 * 1024 / sizeof(int);
 
 static void print_ident(crawler_t *c, node_t *id)
 {
@@ -19,16 +18,12 @@ static void print_ident(crawler_t *c, node_t *id)
 
 static void push(crawler_t *c, const char *lit)
 {
-    static int unique = 0;
-    stack[stack_idx] = unique++;
-    fprintf(c->fp, "int %s%d = %s;\n", st, stack[stack_idx], lit);
-    ++stack_idx;
+    fprintf(c->fp, "%s[%s] = %s; %s += 1;\n", st, sp, lit, sp);
 }
 
 static void pop(crawler_t *c, const char *lit)
 {
-    --stack_idx;
-    fprintf(c->fp, "%s = %s%d;\n", lit, st, stack[stack_idx]);
+    fprintf(c->fp, "%s = %s[%s -= 1];\n", lit, st, sp);
 }
 
 static void emit(crawler_t *c, const node_t *n)
@@ -111,11 +106,12 @@ static void emit(crawler_t *c, const node_t *n)
             for (int i = 0; i < num_args; ++i) {
                 if (i)
                     fprintf(c->fp, ",");
-                fprintf(c->fp, "%s%d", st, stack[stack_idx-(num_args-i)]);
+                fprintf(c->fp, "%s[%s-%d]", st, sp, num_args-i);
             }
             fprintf(c->fp, ")");
             fprintf(c->fp, ";\n");
-            stack_idx -= num_args;
+            emit_tabs(c, indent);
+            fprintf(c->fp, "%s -= %d;\n", sp, num_args);
         } while (0);
         break;
 
@@ -255,8 +251,17 @@ extern void emit_obfc(crawler_t *c, const file_t *f)
 {
     fprintf(c->fp, "static int %s;\n", r0);
     fprintf(c->fp, "static int %s;\n", r1);
+    fprintf(c->fp, "static int %s[%d];\n", st, stack_size);
+    fprintf(c->fp, "static int %s;\n", sp);
     for (node_t **decls = f->decls; decls && *decls; ++decls) {
-        emit(c, *decls);
-        fprintf(c->fp, ";\n");
+        switch ((*decls)->t) {
+        case DECL_FUNC:
+            emit(c, *decls);
+            fprintf(c->fp, ";\n");
+            break;
+        default:
+            PANIC("only func decls are supported at the top level");
+            break;
+        }
     }
 }
