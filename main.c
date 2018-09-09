@@ -58,7 +58,7 @@ int main(int argc, char *argv[])
 
             switch (emitter) {
             case EMIT_C:
-                crawl_file(&crawler, f);
+                emit_c(&crawler, f);
                 break;
             case EMIT_OBFC:
                 emit_obfc(&crawler, f);

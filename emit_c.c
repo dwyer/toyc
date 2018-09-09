@@ -5,21 +5,13 @@
 #include <assert.h>
 #include <stdio.h>
 
-extern void crawl_file(crawler_t *c, const file_t *f)
-{
-    for (node_t **decls = f->decls; decls && *decls; ++decls) {
-        crawl_node(c, *decls);
-        fprintf(c->fp, ";\n");
-    }
-}
-
 extern void emit_tabs(crawler_t *c, int n)
 {
     for (int i = 0; i < n; ++i)
         fputc('\t', c->fp);
 }
 
-extern void crawl_node(crawler_t *c, const node_t *n)
+static void emit(crawler_t *c, const node_t *n)
 {
     static int indent = 0;
 
@@ -32,34 +24,34 @@ extern void crawl_node(crawler_t *c, const node_t *n)
         break;
 
     case DECL_FUNC:
-        crawl_node(c, n->decl.func.type);
+        emit(c, n->decl.func.type);
         fprintf(c->fp, " ");
-        crawl_node(c, n->decl.func.name);
+        emit(c, n->decl.func.name);
         fprintf(c->fp, "(");
         for (node_t **params = n->decl.func.params; params && *params; ) {
-            crawl_node(c, *params);
+            emit(c, *params);
             if (*++params)
                 fprintf(c->fp, ",");
         }
         fprintf(c->fp, ") ");
         if (n->decl.func.body)
-            crawl_node(c, n->decl.func.body);
+            emit(c, n->decl.func.body);
         break;
 
     case DECL_TYPE:
         fprintf(c->fp, "typedef ");
-        crawl_node(c, n->decl.type.type);
+        emit(c, n->decl.type.type);
         fprintf(c->fp, " ");
-        crawl_node(c, n->decl.type.name);
+        emit(c, n->decl.type.name);
         break;
 
     case DECL_VAR:
-        crawl_node(c, n->decl.var.type);
+        emit(c, n->decl.var.type);
         fprintf(c->fp, " ");
-        crawl_node(c, n->decl.var.name);
+        emit(c, n->decl.var.name);
         if (n->decl.var.value) {
             fprintf(c->fp, " = ");
-            crawl_node(c, n->decl.var.value);
+            emit(c, n->decl.var.value);
         }
         break;
 
@@ -69,17 +61,17 @@ extern void crawl_node(crawler_t *c, const node_t *n)
 
     case EXPR_BINARY:
         fprintf(c->fp, "(");
-        crawl_node(c, n->expr.binary.x);
+        emit(c, n->expr.binary.x);
         fprintf(c->fp, " %s ", token_string(n->expr.binary.op));
-        crawl_node(c, n->expr.binary.y);
+        emit(c, n->expr.binary.y);
         fprintf(c->fp, ")");
         break;
 
     case EXPR_CALL:
-        crawl_node(c, n->expr.call.func);
+        emit(c, n->expr.call.func);
         fprintf(c->fp, "(");
         for (node_t **args = n->expr.call.args; args && *args; ) {
-            crawl_node(c, *args);
+            emit(c, *args);
             if (*++args)
                 fprintf(c->fp, ", ");
         }
@@ -87,9 +79,9 @@ extern void crawl_node(crawler_t *c, const node_t *n)
         break;
 
     case EXPR_FIELD:
-        crawl_node(c, n->expr.field.type);
+        emit(c, n->expr.field.type);
         fprintf(c->fp, " ");
-        crawl_node(c, n->expr.field.name);
+        emit(c, n->expr.field.name);
         break;
 
     case EXPR_IDENT:
@@ -98,7 +90,7 @@ extern void crawl_node(crawler_t *c, const node_t *n)
 
     case EXPR_PAREN:
         fprintf(c->fp, "(");
-        crawl_node(c, n->expr.paren.x);
+        emit(c, n->expr.paren.x);
         fprintf(c->fp, ")");
         break;
 
@@ -106,7 +98,7 @@ extern void crawl_node(crawler_t *c, const node_t *n)
         fprintf(c->fp, "struct {\n");
         node_t **fields = n->expr.struct_.fields;
         while (*fields) {
-            crawl_node(c, *fields++);
+            emit(c, *fields++);
             fprintf(c->fp, ";\n");
         }
         fprintf(c->fp, "}");
@@ -114,13 +106,13 @@ extern void crawl_node(crawler_t *c, const node_t *n)
 
     case EXPR_UNARY:
         fprintf(c->fp, "%s", token_string(n->expr.unary.op));
-        crawl_node(c, n->expr.unary.expr);
+        emit(c, n->expr.unary.expr);
         break;
 
     case STMT_ASSIGN:
-        crawl_node(c, n->stmt.assign.lhs);
+        emit(c, n->stmt.assign.lhs);
         fprintf(c->fp, "%s", token_string(n->stmt.assign.tok));
-        crawl_node(c, n->stmt.assign.rhs);
+        emit(c, n->stmt.assign.rhs);
         break;
 
     case STMT_BLOCK:
@@ -128,7 +120,7 @@ extern void crawl_node(crawler_t *c, const node_t *n)
         ++indent;
         for (node_t **stmts = n->stmt.block.stmts; stmts && *stmts; ++stmts) {
             emit_tabs(c, indent);
-            crawl_node(c, *stmts);
+            emit(c, *stmts);
             fprintf(c->fp, ";\n");
         }
         --indent;
@@ -141,38 +133,38 @@ extern void crawl_node(crawler_t *c, const node_t *n)
         break;
 
     case STMT_DECL:
-        crawl_node(c, n->stmt.decl.decl);
+        emit(c, n->stmt.decl.decl);
         break;
 
     case STMT_EMPTY:
         break;
 
     case STMT_EXPR:
-        crawl_node(c, n->stmt.decl.decl);
+        emit(c, n->stmt.decl.decl);
         break;
 
     case STMT_FOR:
         fprintf(c->fp, "for (");
         if (n->stmt.for_.init)
-            crawl_node(c, n->stmt.for_.init);
+            emit(c, n->stmt.for_.init);
         fprintf(c->fp, ";");
         if (n->stmt.for_.cond)
-            crawl_node(c, n->stmt.for_.cond);
+            emit(c, n->stmt.for_.cond);
         fprintf(c->fp, ";");
         if (n->stmt.for_.post)
-            crawl_node(c, n->stmt.for_.post);
+            emit(c, n->stmt.for_.post);
         fprintf(c->fp, ") ");
-        crawl_node(c, n->stmt.for_.body);
+        emit(c, n->stmt.for_.body);
         break;
 
     case STMT_IF:
         fprintf(c->fp, "if (");
-        crawl_node(c, n->stmt.if_.cond);
+        emit(c, n->stmt.if_.cond);
         fprintf(c->fp, ") ");
-        crawl_node(c, n->stmt.if_.body);
+        emit(c, n->stmt.if_.body);
         if (n->stmt.if_.else_) {
             fprintf(c->fp, " else ");
-            crawl_node(c, n->stmt.if_.else_);
+            emit(c, n->stmt.if_.else_);
         }
         break;
 
@@ -180,10 +172,18 @@ extern void crawl_node(crawler_t *c, const node_t *n)
         fprintf(c->fp, "return");
         if (n->stmt.return_.expr) {
             fprintf(c->fp, " ");
-            crawl_node(c, n->stmt.return_.expr);
+            emit(c, n->stmt.return_.expr);
         }
         break;
 
         /* XXX: no default clause, we want warnings for unhandled ndoe types */
+    }
+}
+
+extern void emit_c(crawler_t *c, const file_t *f)
+{
+    for (node_t **decls = f->decls; decls && *decls; ++decls) {
+        emit(c, *decls);
+        fprintf(c->fp, ";\n");
     }
 }
