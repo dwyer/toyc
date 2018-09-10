@@ -15,6 +15,7 @@ static const char *eax = "%eax";
 static const char *ecx = "%ecx";
 
 
+#ifdef __APPLE__
 static int scope_len(const scope_t *s)
 {
     int n = 1;
@@ -24,6 +25,7 @@ static int scope_len(const scope_t *s)
     }
     return n;
 }
+#endif
 
 static int lookup(scope_t *s, const char *ident)
 {
