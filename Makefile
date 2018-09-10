@@ -1,11 +1,12 @@
 CFLAGS+=-Wall
-CFLAGS+=-DLOG_LEVEL=2
 CFLAGS+=-I/usr/local/include
 CFLAGS+=-D_GNU_SOURCE
+CFLAGS+=-DLOG_LEVEL=2
 
 LDFLAGS+=-L/usr/local/lib
+LDLIBS+=-lda
 
-main: ast.o emit_c.o emit_x64.o main.o parser.o scanner.o token.o -lda
+main: ast.o emit_c.o emit_x64.o main.o parser.o scanner.o token.o
 
 ast.o: ast.h token.h
 emit_c.o: ast.h emit.h token.h
