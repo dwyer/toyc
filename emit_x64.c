@@ -5,6 +5,12 @@
 #include <assert.h>
 #include <stdio.h>
 
+#ifdef __APPLE__
+static const char *pre = "_";
+#else
+static const char *pre = "";
+#endif
+
 static const char *eax = "%eax";
 static const char *ecx = "%ecx";
 
@@ -54,13 +60,13 @@ static char *ident_string(node_t *n)
 
 static void push(crawler_t *c, scope_t *s, const char *val, char *var)
 {
-    fprintf(c->fp, "\tpush %s\n", val);
+    fprintf(c->fp, "\tpushl %s\n", val);
     da_append_s(&s->list, var = var ? var : "");
 }
 
 static void pop(crawler_t *c, scope_t *s, const char *val)
 {
-    fprintf(c->fp, "\tpop %s\n", val);
+    fprintf(c->fp, "\tpopl %s\n", val);
     free(da_pop_s(&s->list));
 }
 
@@ -83,14 +89,14 @@ static void emit(crawler_t *c, const node_t *n)
 
     case DECL_FUNC:
         if (n->decl.func.body) {
-            fprintf(c->fp, ".globl _%s\n", ident_string(n->decl.func.name));
+            fprintf(c->fp, ".globl %s%s\n", pre, ident_string(n->decl.func.name));
             top_scope = ast_new_scope(NULL);
             for (node_t **params = n->decl.func.params; params && *params; ++params) {
                 node_t *param = *params;
                 da_append_s(&top_scope->list, ident_string(param->expr.field.name));
             }
             da_append_s(&top_scope->list, ""); // return address
-            fprintf(c->fp, "_%s:\n", ident_string(n->decl.func.name));
+            fprintf(c->fp, "%s%s:\n", pre, ident_string(n->decl.func.name));
             push(c, top_scope, "%ebp", NULL);
             fprintf(c->fp, "\tmovl %%esp, %%ebp\n");
             num_rets = 0;
@@ -193,6 +199,7 @@ static void emit(crawler_t *c, const node_t *n)
                 fprintf(c->fp, "\tsetne %%al\n");
                 break;
             case token_LAND:
+                fprintf(c->fp, "\tmovl %s, %s\n", rhs, ecx);
                 fprintf(c->fp, "\tcmpl $0, %s\n", ecx);
                 fprintf(c->fp, "\tsetne %%cl\n");
                 fprintf(c->fp, "\tcmpl $0, %s\n", eax);
@@ -217,6 +224,7 @@ static void emit(crawler_t *c, const node_t *n)
     case EXPR_CALL:
         do {
             top_scope = ast_new_scope(top_scope);
+#ifdef __APPLE__
             int num_args = 0;
             for (node_t **args = n->expr.call.args; args && *args; ++args)
                 num_args += 1;
@@ -227,6 +235,7 @@ static void emit(crawler_t *c, const node_t *n)
                 for (int i = 0; i < pad; ++i)
                     da_append_s(&top_scope->list, "");
             }
+#endif
             for (node_t **args = n->expr.call.args; args && *args; ++args) {
                 char *lit = simplify(*args, top_scope);
                 if (lit) {
@@ -237,7 +246,8 @@ static void emit(crawler_t *c, const node_t *n)
                     push(c, top_scope, eax, NULL);
                 }
             }
-            fprintf(c->fp, "\tcall _%s\n", ident_string(n->expr.call.func));
+            fprintf(c->fp, "\tcall %s%s\n", pre,
+                    ident_string(n->expr.call.func));
             if (da_len(&top_scope->list))
                 fprintf(c->fp, "\taddl $%d, %%esp\n",
                         4 * da_len(&top_scope->list));

@@ -6,10 +6,10 @@ fi
 kcfile="$1"
 binfile="$2"
 
-flags="--emit-obfc"
+flags="--emit-x64"
 
 # cat ${kcfile} >&2
 # echo ' =========== ' >&2
 # ./main ${flags} ${kcfile} >&2
 # echo ' =========== ' >&2
-./main ${flags} ${kcfile} | cc -w -x c -o ${binfile} -
+./main ${flags} ${kcfile} | cc -w -x assembler -m32 -o ${binfile} -
