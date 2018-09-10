@@ -1,5 +1,4 @@
-#ifndef EXPR_H
-#define EXPR_H
+#pragma once
 
 #include "token.h"
 
@@ -174,5 +173,4 @@ typedef struct _scope {
 } scope_t;
 
 extern scope_t *ast_new_scope(scope_t *outer);
-
-#endif
+extern int scope_lookup(scope_t *s, const char *ident);

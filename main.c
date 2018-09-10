@@ -8,6 +8,7 @@
 static enum emitter {
     EMIT_C,
     EMIT_OBFC,
+    EMIT_X64,
 } emitter = EMIT_C;
 
 int freadall(FILE *fp, char **sp)
@@ -40,6 +41,8 @@ int main(int argc, char *argv[])
             emitter = EMIT_C;
         } else if (!strcmp(*argv, "--emit-obfc")) {
             emitter = EMIT_OBFC;
+        } else if (!strcmp(*argv, "--emit-x64")) {
+            emitter = EMIT_X64;
         } else {
             if (argc < 1)
                 return 1;
@@ -62,6 +65,9 @@ int main(int argc, char *argv[])
                 break;
             case EMIT_OBFC:
                 emit_obfc(&crawler, f);
+                break;
+            case EMIT_X64:
+                emit_x64(&crawler, f);
                 break;
             }
 

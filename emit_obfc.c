@@ -12,19 +12,6 @@ static const char *ebp = "$ebp";
 static const char *st = "$mem";
 static const int stack_size = 8 * 1024 * 1024 / sizeof(int);
 
-static int lookup(scope_t *s, const char *ident)
-{
-    int idx = 1;
-    while (s) {
-        for (int i = 1; i <= da_len(&s->list); ++i, ++idx) {
-            if (!strcmp(da_get_s(&s->list, -i), ident))
-                return idx;
-        }
-        s = s->outer;
-    }
-    return 0;
-}
-
 static char *ident_string(node_t *n)
 {
     return n->expr.ident.name;
@@ -144,7 +131,7 @@ static void emit(crawler_t *c, const node_t *n)
 
     case EXPR_IDENT:
         fprintf(c->fp, "\t%s = %s[%s-%d];\n", r0, st, esp,
-                lookup(top_scope, n->expr.ident.name));
+                scope_lookup(top_scope, n->expr.ident.name));
         break;
 
     case EXPR_PAREN:
@@ -169,7 +156,7 @@ static void emit(crawler_t *c, const node_t *n)
     case STMT_ASSIGN:
         emit(c, n->stmt.assign.rhs);
         fprintf(c->fp, "\t%s[%s-%d] = %s;\n", st, esp,
-                lookup(top_scope, ident_string(n->stmt.assign.lhs)),
+                scope_lookup(top_scope, ident_string(n->stmt.assign.lhs)),
                 r0);
         break;
 
