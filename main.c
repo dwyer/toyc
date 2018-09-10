@@ -7,7 +7,6 @@
 
 static enum emitter {
     EMIT_C,
-    EMIT_OBFC,
     EMIT_X64,
 } emitter = EMIT_C;
 
@@ -39,8 +38,6 @@ int main(int argc, char *argv[])
     while (*++argv) {
         if (!strcmp(*argv, "--emit-c")) {
             emitter = EMIT_C;
-        } else if (!strcmp(*argv, "--emit-obfc")) {
-            emitter = EMIT_OBFC;
         } else if (!strcmp(*argv, "--emit-x64")) {
             emitter = EMIT_X64;
         } else {
@@ -62,9 +59,6 @@ int main(int argc, char *argv[])
             switch (emitter) {
             case EMIT_C:
                 emit_c(&crawler, f);
-                break;
-            case EMIT_OBFC:
-                emit_obfc(&crawler, f);
                 break;
             case EMIT_X64:
                 emit_x64(&crawler, f);
